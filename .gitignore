@@ -1,0 +1,35 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Kotlin/JS
+build/
+.gradle/
+.kotlin/
+node_modules/
+kotlin-js-store/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
