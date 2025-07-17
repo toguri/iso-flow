@@ -1,0 +1,42 @@
+[package]
+name = "nba-trade-scraper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# 非同期ランタイム
+tokio = { version = "1.40", features = ["full"] }
+
+# HTTPクライアント
+reqwest = { version = "0.12", features = ["json", "cookies"] }
+
+# RSSパーサー
+rss = "2.0"
+
+# 日時処理
+chrono = { version = "0.4", features = ["serde"] }
+
+# シリアライゼーション
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# エラーハンドリング
+anyhow = "1.0"
+thiserror = "1.0"
+
+# ログ出力
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTMLパーサー（将来的に使用）
+scraper = "0.20"
+
+# 環境変数
+dotenv = "0.15"
+
+# HTTPサーバー（GraphQL用に後で使用）
+axum = "0.7"
+
+# GraphQL（後で使用）
+async-graphql = { version = "7.0", features = ["apollo_tracing", "log"] }
+async-graphql-axum = "7.0"

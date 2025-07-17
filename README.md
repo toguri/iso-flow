@@ -1,5 +1,7 @@
 # NBAトレード速報サイト
 
+[![Rust CI](https://github.com/toguri/iso-flow/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/toguri/iso-flow/actions/workflows/rust-ci.yml)
+
 リアルタイムでNBAのトレード情報を表示するWebアプリケーション。
 
 ## 🏀 概要
