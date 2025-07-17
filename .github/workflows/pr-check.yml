@@ -1,0 +1,41 @@
+name: PR Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-commits:
+    name: Check Commit Messages
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check commit messages
+      run: |
+        echo "Checking commit messages..."
+        # 簡単なコミットメッセージ検証
+        # feat:, fix:, docs:, style:, refactor:, test:, chore: で始まるかチェック
+        git log --format=%s origin/main..HEAD | while read -r commit_msg; do
+          if ! echo "$commit_msg" | grep -qE '^(feat|fix|docs|style|refactor|test|chore):'; then
+            echo "❌ Invalid commit message: $commit_msg"
+            echo "Commit messages should start with: feat:, fix:, docs:, style:, refactor:, test:, or chore:"
+            exit 1
+          fi
+        done
+        echo "✅ All commit messages are valid"
+
+  label-pr:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+    - uses: actions/labeler@v5
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"

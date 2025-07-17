@@ -48,5 +48,8 @@ impl RssFeed {
 
 pub const RSS_FEEDS: &[(&str, NewsSource)] = &[
     ("https://www.espn.com/espn/rss/nba/news", NewsSource::ESPN),
-    ("https://basketball.realgm.com/rss/wiretap/0/0.xml", NewsSource::RealGM),
+    (
+        "https://basketball.realgm.com/rss/wiretap/0/0.xml",
+        NewsSource::RealGM,
+    ),
 ];
