@@ -35,7 +35,7 @@ scraper = "0.20"
 dotenv = "0.15"
 
 # HTTPサーバー（GraphQL用に後で使用）
-axum = "0.7"
+axum = "0.8"
 
 # GraphQL（後で使用）
 async-graphql = { version = "7.0", features = ["apollo_tracing", "log"] }

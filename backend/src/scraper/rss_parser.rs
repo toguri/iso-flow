@@ -54,8 +54,7 @@ impl RssParser {
             .await
             .context("Failed to read response body")?;
 
-        let channel = Channel::read_from(content.as_bytes())
-            .context("Failed to parse RSS feed")?;
+        let channel = Channel::read_from(content.as_bytes()).context("Failed to parse RSS feed")?;
 
         let mut news_items = Vec::new();
 
@@ -85,9 +84,7 @@ impl RssParser {
         let id = item
             .guid()
             .map(|g| g.value().to_string())
-            .unwrap_or_else(|| {
-                format!("{}-{}", source, published_at.timestamp())
-            });
+            .unwrap_or_else(|| format!("{}-{}", source, published_at.timestamp()));
 
         Some(TradeNews {
             id,
@@ -102,13 +99,16 @@ impl RssParser {
 
     fn is_trade_related(&self, news: &TradeNews) -> bool {
         let keywords = vec![
-            "trade", "traded", "acquire", "acquired", "deal", "sign",
-            "waive", "waived", "buyout", "release", "released",
-            "exchange", "send", "sent", "receive", "swap",
+            "trade", "traded", "acquire", "acquired", "deal", "sign", "waive", "waived", "buyout",
+            "release", "released", "exchange", "send", "sent", "receive", "swap",
         ];
 
-        let text = format!("{} {}", news.title.to_lowercase(), news.description.to_lowercase());
-        
+        let text = format!(
+            "{} {}",
+            news.title.to_lowercase(),
+            news.description.to_lowercase()
+        );
+
         keywords.iter().any(|keyword| text.contains(keyword))
     }
 }
@@ -121,10 +121,10 @@ mod tests {
     async fn test_fetch_feeds() {
         let parser = RssParser::new();
         let result = parser.fetch_all_feeds().await;
-        
+
         assert!(result.is_ok());
         let news = result.unwrap();
-        
+
         if !news.is_empty() {
             println!("Found {} trade-related news items", news.len());
             for item in news.iter().take(5) {

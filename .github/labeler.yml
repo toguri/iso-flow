@@ -1,0 +1,19 @@
+# ラベル自動付与の設定
+backend:
+  - backend/**
+
+frontend:
+  - frontend/**
+
+documentation:
+  - '*.md'
+  - docs/**
+
+ci/cd:
+  - .github/**
+
+dependencies:
+  - '**/Cargo.toml'
+  - '**/Cargo.lock'
+  - '**/package.json'
+  - '**/package-lock.json'
