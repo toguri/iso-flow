@@ -2,6 +2,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewsItem {
+    pub title: String,
+    pub link: String,
+    pub source: NewsSource,
+    pub published_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeNews {
     pub id: String,
     pub title: String,
