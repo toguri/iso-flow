@@ -2,6 +2,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewsItem {
+    pub title: String,
+    pub link: String,
+    pub source: NewsSource,
+    pub published_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeNews {
     pub id: String,
     pub title: String,
@@ -48,5 +56,8 @@ impl RssFeed {
 
 pub const RSS_FEEDS: &[(&str, NewsSource)] = &[
     ("https://www.espn.com/espn/rss/nba/news", NewsSource::ESPN),
-    ("https://basketball.realgm.com/rss/wiretap/0/0.xml", NewsSource::RealGM),
+    (
+        "https://basketball.realgm.com/rss/wiretap/0/0.xml",
+        NewsSource::RealGM,
+    ),
 ];
