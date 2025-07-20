@@ -47,7 +47,7 @@ impl Query {
     async fn trade_news(&self, _ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
         let parser = RssParser::new();
         let news = parser.fetch_all_feeds().await?;
-        
+
         Ok(news.into_iter().map(TradeNews::from).collect())
     }
 
@@ -58,9 +58,9 @@ impl Query {
     ) -> async_graphql::Result<Vec<TradeNews>> {
         let parser = RssParser::new();
         let news = parser.fetch_all_feeds().await?;
-        
+
         let trade_news: Vec<TradeNews> = news.into_iter().map(TradeNews::from).collect();
-        
+
         Ok(trade_news
             .into_iter()
             .filter(|n| n.category.to_lowercase() == category.to_lowercase())
@@ -74,9 +74,9 @@ impl Query {
     ) -> async_graphql::Result<Vec<TradeNews>> {
         let parser = RssParser::new();
         let news = parser.fetch_all_feeds().await?;
-        
+
         let trade_news: Vec<TradeNews> = news.into_iter().map(TradeNews::from).collect();
-        
+
         Ok(trade_news
             .into_iter()
             .filter(|n| n.source.to_lowercase() == source.to_lowercase())

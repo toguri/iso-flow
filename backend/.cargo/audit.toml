@@ -1,0 +1,3 @@
+[advisories]
+# RSA脆弱性 - MySQLドライバー経由だが、MySQL機能は使用していない
+ignore = ["RUSTSEC-2023-0071"]

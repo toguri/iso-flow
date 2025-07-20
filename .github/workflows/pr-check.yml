@@ -19,7 +19,8 @@ jobs:
         echo "Checking commit messages..."
         # 簡単なコミットメッセージ検証
         # feat:, fix:, docs:, style:, refactor:, test:, chore: で始まるかチェック
-        git log --format=%s origin/main..HEAD | while read -r commit_msg; do
+        # マージコミットは除外
+        git log --format=%s --no-merges origin/main..HEAD | while read -r commit_msg; do
           if ! echo "$commit_msg" | grep -qE '^(feat|fix|docs|style|refactor|test|chore):'; then
             echo "❌ Invalid commit message: $commit_msg"
             echo "Commit messages should start with: feat:, fix:, docs:, style:, refactor:, test:, or chore:"

@@ -34,7 +34,7 @@ impl std::fmt::Display for NewsSource {
             NewsSource::ESPN => write!(f, "ESPN"),
             NewsSource::RealGM => write!(f, "RealGM"),
             NewsSource::HoopsHype => write!(f, "HoopsHype"),
-            NewsSource::Other(s) => write!(f, "{}", s),
+            NewsSource::Other(s) => write!(f, "{s}"),
         }
     }
 }

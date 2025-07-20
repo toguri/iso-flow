@@ -10,6 +10,12 @@ pub struct RssParser {
     client: Client,
 }
 
+impl Default for RssParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RssParser {
     pub fn new() -> Self {
         Self {

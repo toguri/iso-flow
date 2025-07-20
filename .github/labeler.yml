@@ -1,19 +1,26 @@
 # ラベル自動付与の設定
 backend:
-  - backend/**
+  - changed-files:
+    - any-glob-to-any-file: 'backend/**'
 
 frontend:
-  - frontend/**
+  - changed-files:
+    - any-glob-to-any-file: 'frontend/**'
 
 documentation:
-  - '*.md'
-  - docs/**
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.md'
+      - 'docs/**'
 
 ci/cd:
-  - .github/**
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
 
 dependencies:
-  - '**/Cargo.toml'
-  - '**/Cargo.lock'
-  - '**/package.json'
-  - '**/package-lock.json'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - '**/package.json'
+      - '**/package-lock.json'
