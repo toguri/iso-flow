@@ -116,6 +116,20 @@ make coverage-html
 # レポートは target/llvm-cov/html/index.html に生成されます
 ```
 
+## ドキュメント
+
+### APIドキュメントの生成
+```bash
+# ローカルでドキュメントを生成・表示
+make docs
+
+# 依存関係を含むドキュメントを生成
+make docs-all
+```
+
+### オンラインドキュメント
+デプロイされたAPIドキュメントは[こちら](https://toguri.github.io/iso-flow/rust-api/)から参照できます。
+
 ## 技術スタック
 - **Rust** - プログラミング言語
 - **Axum** (v0.8) - Webフレームワーク

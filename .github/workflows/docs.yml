@@ -1,0 +1,67 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/src/**'
+      - 'backend/Cargo.toml'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/src/**'
+      - 'backend/Cargo.toml'
+      - '.github/workflows/docs.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          backend/target/
+        key: ${{ runner.os }}-cargo-docs-${{ hashFiles('backend/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-docs-
+          ${{ runner.os }}-cargo-
+    
+    - name: Build documentation
+      run: |
+        cargo doc --no-deps --all-features
+        echo "<meta http-equiv=\"refresh\" content=\"0; url=nba_trade_scraper\">" > target/doc/index.html
+    
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust-docs
+        path: backend/target/doc
+        retention-days: 7
+    
+    - name: Deploy to GitHub Pages
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./backend/target/doc
+        destination_dir: rust-api
+        keep_files: true
