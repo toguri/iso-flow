@@ -22,4 +22,12 @@ async fn test_database_setup() {
     });
     
     assert!(has_trade_news, "trade_news table was not created");
+    
+    // teams テーブルも確認
+    let has_teams = result.iter().any(|row| {
+        let name: String = sqlx::Row::get(row, 0);
+        name == "teams"
+    });
+    
+    assert!(has_teams, "teams table was not created");
 }
