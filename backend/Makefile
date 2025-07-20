@@ -1,8 +1,16 @@
-.PHONY: test coverage coverage-html clean
+.PHONY: test test-unit test-integration coverage coverage-html clean
 
-# テスト実行
+# 全テスト実行
 test:
 	cargo test --all-features
+
+# 単体テストのみ実行
+test-unit:
+	cargo test --lib --all-features
+
+# 統合テストのみ実行
+test-integration:
+	cargo test --test '*' --all-features
 
 # カバレッジ測定（テキスト形式）
 coverage:
