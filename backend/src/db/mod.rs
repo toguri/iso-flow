@@ -7,7 +7,8 @@ pub mod models;
 pub type DbPool = Pool<Sqlite>;
 
 pub async fn create_pool() -> Result<DbPool> {
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     // SQLiteの接続プールを作成
     let pool = SqlitePool::connect(&database_url).await?;
