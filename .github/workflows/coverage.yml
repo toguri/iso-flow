@@ -59,6 +59,7 @@ jobs:
         cargo llvm-cov report --text
     
     - name: Upload coverage to Codecov
+      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
       uses: codecov/codecov-action@v4
       with:
         files: backend/lcov.info
@@ -75,13 +76,9 @@ jobs:
           backend/target/llvm-cov/html/
         retention-days: 7
     
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: 5monkeys/cobertura-action@v14
-      with:
-        path: backend/lcov.info
-        minimum_coverage: 30
-        show_line: true
-        show_missing: true
-        skip_covered: false
-        fail_below_threshold: false
+    - name: Generate coverage summary
+      run: |
+        echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        cargo llvm-cov report >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
