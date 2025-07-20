@@ -1,0 +1,23 @@
+# GitHubラベルの定義
+# gh label create コマンドで使用可能
+
+labels:
+  - name: backend
+    description: "Backend related changes"
+    color: "0052CC"
+    
+  - name: frontend
+    description: "Frontend related changes" 
+    color: "FBCA04"
+    
+  - name: documentation
+    description: "Documentation changes"
+    color: "0E8A16"
+    
+  - name: ci/cd
+    description: "CI/CD configuration changes"
+    color: "1D76DB"
+    
+  - name: dependencies
+    description: "Dependency updates"
+    color: "EE3F46"
