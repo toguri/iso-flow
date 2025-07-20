@@ -1,9 +1,9 @@
 //! GraphQL APIの実装
 //!
 //! このモジュールは、NBAトレード情報を提供するGraphQL APIを実装します。
-//! 
+//!
 //! ## クエリ
-//! 
+//!
 //! - `tradeNews`: 全てのトレードニュースを取得
 //! - `tradeNewsByCategory`: カテゴリー別にニュースを取得
 //! - `tradeNewsBySource`: ソース別にニュースを取得
