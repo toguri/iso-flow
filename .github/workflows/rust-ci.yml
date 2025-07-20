@@ -52,9 +52,7 @@ jobs:
     
     - name: Setup test database
       run: |
-        echo "DATABASE_URL=sqlite://test.db" > .env
-        cargo sqlx database create
-        cargo sqlx migrate run
+        echo "DATABASE_URL=sqlite::memory:" > .env
     
     - name: Build
       run: cargo build --verbose
