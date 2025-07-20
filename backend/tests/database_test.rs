@@ -52,13 +52,11 @@ async fn test_insert_and_retrieve_trade_news() {
     assert_eq!(insert_result.rows_affected(), 1);
 
     // データを取得
-    let retrieved: TradeNewsDb = sqlx::query_as(
-        "SELECT * FROM trade_news WHERE external_id = ?",
-    )
-    .bind(&new_news.external_id)
-    .fetch_one(&pool)
-    .await
-    .expect("Failed to retrieve trade news");
+    let retrieved: TradeNewsDb = sqlx::query_as("SELECT * FROM trade_news WHERE external_id = ?")
+        .bind(&new_news.external_id)
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to retrieve trade news");
 
     // 検証
     assert_eq!(retrieved.external_id, new_news.external_id);
@@ -176,13 +174,12 @@ async fn test_query_by_category() {
     }
 
     // Tradeカテゴリーのニュースを取得
-    let trade_news: Vec<TradeNewsDb> = sqlx::query_as(
-        "SELECT * FROM trade_news WHERE category = ?",
-    )
-    .bind("Trade")
-    .fetch_all(&pool)
-    .await
-    .expect("Failed to query by category");
+    let trade_news: Vec<TradeNewsDb> =
+        sqlx::query_as("SELECT * FROM trade_news WHERE category = ?")
+            .bind("Trade")
+            .fetch_all(&pool)
+            .await
+            .expect("Failed to query by category");
 
     assert!(!trade_news.is_empty());
     assert!(trade_news.iter().all(|n| n.category == "Trade"));

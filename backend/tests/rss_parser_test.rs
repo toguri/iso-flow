@@ -1,7 +1,4 @@
-use nba_trade_scraper::scraper::{
-    models::NewsSource,
-    rss_parser::RssParser,
-};
+use nba_trade_scraper::scraper::{models::NewsSource, rss_parser::RssParser};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -56,8 +53,8 @@ async fn test_parse_rss_feed() {
         .await
         .expect("Failed to fetch feed");
 
-    // 結果を検証
-    assert_eq!(news_items.len(), 3);
+    // 結果を検証 - トレード関連のニュースのみが取得される
+    assert_eq!(news_items.len(), 2);
 
     // トレード記事が正しく取得されているか確認
     let trade_news = news_items
@@ -73,12 +70,11 @@ async fn test_parse_rss_feed() {
         .expect("Signing news not found");
     assert!(signing_news.is_trade);
 
-    // その他の記事も取得されているか確認
-    let other_news = news_items
+    // トレード関連でない記事は除外されているか確認
+    let has_other_news = news_items
         .iter()
-        .find(|n| n.title.contains("playoff predictions"))
-        .expect("Other news not found");
-    assert!(!other_news.is_trade);
+        .any(|n| n.title.contains("playoff predictions"));
+    assert!(!has_other_news, "Non-trade news should be filtered out");
 }
 
 #[tokio::test]
