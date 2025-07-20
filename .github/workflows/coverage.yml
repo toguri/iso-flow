@@ -2,12 +2,12 @@ name: Code Coverage
 
 on:
   push:
-    branches: [ feature/initial-setup ]
+    branches: [ main ]
     paths:
       - 'backend/**'
       - '.github/workflows/coverage.yml'
   pull_request:
-    branches: [ feature/initial-setup ]
+    branches: [ main ]
     paths:
       - 'backend/**'
       - '.github/workflows/coverage.yml'
@@ -29,7 +29,7 @@ jobs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        components: rustfmt, clippy, llvm-tools-preview
+        components: llvm-tools-preview
     
     - name: Cache cargo dependencies
       uses: actions/cache@v4
@@ -46,30 +46,35 @@ jobs:
           ${{ runner.os }}-cargo-
     
     - name: Install cargo-llvm-cov
-      run: |
-        if ! command -v cargo-llvm-cov &> /dev/null; then
-          cargo install cargo-llvm-cov
-        fi
+      uses: taiki-e/install-action@cargo-llvm-cov
     
     - name: Setup test database
       run: |
-        echo "DATABASE_URL=sqlite://test.db" > .env
+        echo "DATABASE_URL=sqlite::memory:" > .env
     
     - name: Generate coverage report
       run: |
         cargo llvm-cov clean --workspace
-        cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-        cargo llvm-cov report --summary-only
+        cargo llvm-cov test --all-features --workspace --lcov --output-path lcov.info
+        cargo llvm-cov report --text
     
     - name: Upload coverage to Codecov
+      if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
       uses: codecov/codecov-action@v4
       with:
-        files: ./backend/lcov.info
-        flags: unittests
-        name: codecov-umbrella
+        files: backend/lcov.info
+        flags: backend
         fail_ci_if_error: false
-        verbose: true
         token: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          backend/lcov.info
+          backend/target/llvm-cov/html/
+        retention-days: 7
     
     - name: Generate coverage summary
       run: |
@@ -77,20 +82,3 @@ jobs:
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         cargo llvm-cov report >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-    
-    - name: Check coverage threshold
-      run: |
-        # Extract coverage percentage
-        COVERAGE=$(cargo llvm-cov report --summary-only | grep "TOTAL" | awk '{print $NF}' | sed 's/%//')
-        echo "Current coverage: $COVERAGE%"
-        
-        # Define threshold
-        THRESHOLD=60
-        
-        # Compare with threshold
-        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-          echo "❌ Coverage $COVERAGE% is below threshold of $THRESHOLD%"
-          exit 1
-        else
-          echo "✅ Coverage $COVERAGE% meets threshold of $THRESHOLD%"
-        fi

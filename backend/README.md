@@ -1,5 +1,7 @@
 # NBA Trade Scraper Backend
 
+[![codecov](https://codecov.io/gh/toguri/iso-flow/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/toguri/iso-flow)
+
 NBAのトレード情報を収集・分析するシステムのバックエンド部分です。
 
 ## 現在実装済みの機能
@@ -81,6 +83,26 @@ query {
 }
 ```
 
+## テストとカバレッジ
+
+### テストの実行
+```bash
+cargo test
+```
+
+### カバレッジ測定
+```bash
+# cargo-llvm-covのインストール（初回のみ）
+cargo install cargo-llvm-cov
+
+# カバレッジ測定（テキスト形式）
+make coverage
+
+# カバレッジ測定（HTML形式）
+make coverage-html
+# レポートは target/llvm-cov/html/index.html に生成されます
+```
+
 ## 技術スタック
 - **Rust** - プログラミング言語
 - **Axum** (v0.8) - Webフレームワーク
@@ -88,3 +110,5 @@ query {
 - **reqwest** - HTTPクライアント
 - **rss** - RSSフィード解析
 - **tokio** - 非同期ランタイム
+- **SQLx** - データベースライブラリ
+- **Sea-ORM** - ORM
