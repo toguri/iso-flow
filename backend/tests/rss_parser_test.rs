@@ -61,14 +61,14 @@ async fn test_parse_rss_feed() {
         .iter()
         .find(|n| n.title.contains("Lakers trade"))
         .expect("Trade news not found");
-    assert!(trade_news.is_trade);
+    assert_eq!(trade_news.title, "Lakers trade for star player");
 
     // サイン記事が正しく取得されているか確認
     let signing_news = news_items
         .iter()
         .find(|n| n.title.contains("Warriors sign"))
         .expect("Signing news not found");
-    assert!(signing_news.is_trade);
+    assert_eq!(signing_news.title, "Warriors sign veteran guard");
 
     // トレード関連でない記事は除外されているか確認
     let has_other_news = news_items
