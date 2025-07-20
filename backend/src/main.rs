@@ -1,7 +1,7 @@
 use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::{response::Html, routing::get, Router, serve};
-use nba_trade_scraper::graphql::{Query, create_schema};
+use axum::{response::Html, routing::get, serve, Router};
+use nba_trade_scraper::graphql::{create_schema, Query};
 use tokio::net::TcpListener;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
@@ -34,9 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(axum::extract::Extension(schema));
 
     info!("GraphQL playground available at http://localhost:3000");
-    
+
     let listener = TcpListener::bind("0.0.0.0:3000").await?;
     serve(listener, app).await?;
-    
+
     Ok(())
 }
