@@ -87,8 +87,21 @@ query {
 
 ### テストの実行
 ```bash
-cargo test
+# 全テスト実行
+make test
+
+# 単体テストのみ
+make test-unit
+
+# 統合テストのみ
+make test-integration
 ```
+
+### 統合テスト
+以下の統合テストが実装されています：
+- **GraphQL API**: エンドポイントの動作確認
+- **RSSパーサー**: フィード取得とエラーハンドリング
+- **データベース**: CRUD操作と制約の検証
 
 ### カバレッジ測定
 ```bash

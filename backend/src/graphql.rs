@@ -84,6 +84,30 @@ impl Query {
     }
 }
 
+pub type QueryRoot = Query;
+
 pub fn create_schema() -> Schema<Query, EmptyMutation, EmptySubscription> {
     Schema::new(Query, EmptyMutation, EmptySubscription)
+}
+
+pub fn graphql_routes(schema: Schema<Query, EmptyMutation, EmptySubscription>) -> axum::Router {
+    use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+    use axum::{extract::State, response::Html, routing::get, Router};
+
+    async fn graphql_handler(
+        State(schema): State<Schema<Query, EmptyMutation, EmptySubscription>>,
+        req: GraphQLRequest,
+    ) -> GraphQLResponse {
+        schema.execute(req.into_inner()).await.into()
+    }
+
+    async fn graphql_playground() -> Html<String> {
+        Html(async_graphql::http::playground_source(
+            async_graphql::http::GraphQLPlaygroundConfig::new("/"),
+        ))
+    }
+
+    Router::new()
+        .route("/", get(graphql_playground).post(graphql_handler))
+        .with_state(schema)
 }
