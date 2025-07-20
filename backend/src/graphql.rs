@@ -1,15 +1,32 @@
+//! GraphQL APIの実装
+//!
+//! このモジュールは、NBAトレード情報を提供するGraphQL APIを実装します。
+//! 
+//! ## クエリ
+//! 
+//! - `tradeNews`: 全てのトレードニュースを取得
+//! - `tradeNewsByCategory`: カテゴリー別にニュースを取得
+//! - `tradeNewsBySource`: ソース別にニュースを取得
+
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
 
 use crate::scraper::{RssParser, TradeNews as ScraperTradeNews};
 
+/// GraphQLで返されるトレードニュースの構造体
 #[derive(SimpleObject)]
 pub struct TradeNews {
+    /// ニュースの一意識別子
     pub id: String,
+    /// ニュースのタイトル
     pub title: String,
+    /// ニュースへのリンク
     pub link: String,
+    /// ニュースソース（ESPN、RealGMなど）
     pub source: String,
+    /// 公開日時
     pub published_at: DateTime<Utc>,
+    /// カテゴリー（Trade、Signing、Other）
     pub category: String,
 }
 
@@ -40,10 +57,14 @@ impl From<ScraperTradeNews> for TradeNews {
     }
 }
 
+/// GraphQLクエリのルート
 pub struct Query;
 
 #[Object]
 impl Query {
+    /// 全てのトレードニュースを取得します
+    ///
+    /// トレード関連のキーワードを含むニュースのみを返します
     async fn trade_news(&self, _ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
         let parser = RssParser::new();
         let news = parser.fetch_all_feeds().await?;

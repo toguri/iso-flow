@@ -24,3 +24,11 @@ coverage-html:
 # カバレッジデータのクリーンアップ
 clean:
 	cargo llvm-cov clean --workspace
+
+# ドキュメント生成
+docs:
+	cargo doc --no-deps --all-features --open
+
+# ドキュメント生成（依存関係含む）
+docs-all:
+	cargo doc --all-features --open
