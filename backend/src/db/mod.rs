@@ -19,7 +19,8 @@ pub async fn create_pool() -> Result<DbPool> {
 }
 
 async fn run_migrations(pool: &DbPool) -> Result<()> {
-    sqlx::migrate!("migrations").run(pool).await?;
+    // Use absolute path from CARGO_MANIFEST_DIR for CI compatibility
+    sqlx::migrate!().run(pool).await?;
 
     Ok(())
 }
