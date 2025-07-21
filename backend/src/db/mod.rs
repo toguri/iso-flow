@@ -8,6 +8,7 @@ use sqlx::{sqlite::SqlitePool, Pool, Sqlite};
 use std::env;
 
 pub mod models;
+pub mod simple_repository;
 
 /// データベース接続プールの型エイリアス
 pub type DbPool = Pool<Sqlite>;
