@@ -7,7 +7,7 @@ use crate::scraper::models::NewsItem;
 /// スクレイピングしたデータをデータベースに保存
 pub async fn save_news_items(pool: &SqlitePool, items: Vec<NewsItem>) -> Result<usize> {
     let mut saved_count = 0;
-    
+
     for item in items {
         // 既存チェック
         let exists = sqlx::query!(
@@ -16,12 +16,12 @@ pub async fn save_news_items(pool: &SqlitePool, items: Vec<NewsItem>) -> Result<
         )
         .fetch_one(pool)
         .await?;
-        
+
         if exists.count == 0 {
             // 新規保存
             let now = Utc::now().to_rfc3339();
             let published_at = item.published_at.to_rfc3339();
-            
+
             sqlx::query!(
                 r#"
                 INSERT INTO trade_news (
@@ -43,11 +43,11 @@ pub async fn save_news_items(pool: &SqlitePool, items: Vec<NewsItem>) -> Result<
             )
             .execute(pool)
             .await?;
-            
+
             saved_count += 1;
             tracing::info!("Saved new trade news: {}", item.title);
         }
     }
-    
+
     Ok(saved_count)
 }

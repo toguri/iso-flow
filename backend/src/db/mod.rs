@@ -9,7 +9,6 @@ use std::env;
 
 pub mod models;
 
-
 /// データベース接続プールの型エイリアス
 pub type DbPool = Pool<Sqlite>;
 
