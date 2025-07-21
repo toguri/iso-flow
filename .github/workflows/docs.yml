@@ -64,4 +64,5 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./backend/target/doc
         destination_dir: rust-api
-        keep_files: true
+        keep_files: false
+        cname: false
