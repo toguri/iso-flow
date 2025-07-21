@@ -1,0 +1,17 @@
+# GitHub Pages設定
+theme: null
+plugins: []
+
+# ビルド設定
+exclude:
+  - backend/
+  - frontend/
+  - .github/
+  - README.md
+  - LICENSE
+  - .gitignore
+  - .env*
+  - node_modules/
+  - target/
+  - Cargo.lock
+  - package-lock.json

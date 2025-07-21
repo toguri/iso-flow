@@ -1,0 +1,116 @@
+name: Deploy Root Index to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages-root.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Pages
+      uses: actions/configure-pages@v5
+    
+    - name: Create root index.html
+      run: |
+        mkdir -p docs
+        cat > docs/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ISO Flow - NBA Trade Scraper</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 2rem;
+                    line-height: 1.6;
+                }
+                h1 { color: #333; }
+                .links {
+                    list-style: none;
+                    padding: 0;
+                }
+                .links li {
+                    margin: 1rem 0;
+                }
+                .links a {
+                    color: #0066cc;
+                    text-decoration: none;
+                    font-size: 1.2rem;
+                }
+                .links a:hover {
+                    text-decoration: underline;
+                }
+                .badge {
+                    margin-left: 0.5rem;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>ISO Flow - NBA Trade Scraper</h1>
+            <p>NBAのトレード情報を収集・分析するシステム</p>
+            
+            <h2>ドキュメント</h2>
+            <ul class="links">
+                <li>
+                    <a href="rust-api/">Rust API ドキュメント</a>
+                    <span class="badge">📚</span>
+                </li>
+            </ul>
+            
+            <h2>プロジェクト情報</h2>
+            <ul class="links">
+                <li>
+                    <a href="https://github.com/toguri/iso-flow">GitHub リポジトリ</a>
+                    <span class="badge">📂</span>
+                </li>
+                <li>
+                    <a href="https://codecov.io/gh/toguri/iso-flow">コードカバレッジ</a>
+                    <span class="badge">📊</span>
+                </li>
+            </ul>
+            
+            <h2>ステータス</h2>
+            <p>
+                <img src="https://github.com/toguri/iso-flow/workflows/CI/badge.svg" alt="CI Status">
+                <img src="https://codecov.io/gh/toguri/iso-flow/branch/main/graph/badge.svg?flag=backend" alt="codecov">
+            </p>
+        </body>
+        </html>
+        EOF
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./docs
+  
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

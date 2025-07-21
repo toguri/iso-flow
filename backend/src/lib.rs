@@ -39,3 +39,6 @@ pub mod graphql;
 
 /// RSSスクレイピング機能
 pub mod scraper;
+
+/// ユーティリティ関数
+pub mod utils;
