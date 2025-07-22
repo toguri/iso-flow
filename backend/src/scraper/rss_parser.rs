@@ -102,7 +102,6 @@ impl RssParser {
             category,
         })
     }
-
 }
 
 #[cfg(test)]
@@ -119,14 +118,17 @@ mod tests {
 
         if !news.is_empty() {
             println!("Found {} news items", news.len());
-            
+
             // カテゴリー別に集計
             let trade_count = news.iter().filter(|n| n.category == "Trade").count();
             let signing_count = news.iter().filter(|n| n.category == "Signing").count();
             let other_count = news.iter().filter(|n| n.category == "Other").count();
-            
-            println!("Categories: Trade={}, Signing={}, Other={}", trade_count, signing_count, other_count);
-            
+
+            println!(
+                "Categories: Trade={}, Signing={}, Other={}",
+                trade_count, signing_count, other_count
+            );
+
             println!("\nSample news:");
             for item in news.iter().take(10) {
                 println!("- [{}] {} ({})", item.category, item.title, item.source);

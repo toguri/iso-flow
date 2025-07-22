@@ -3,15 +3,14 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewsItem {
-    pub id: String,                      // RSS GUIDまたはリンクのハッシュ
+    pub id: String, // RSS GUIDまたはリンクのハッシュ
     pub title: String,
-    pub description: Option<String>,     // RSSの説明文
+    pub description: Option<String>, // RSSの説明文
     pub link: String,
     pub source: NewsSource,
-    pub category: String,                // "Trade", "Signing", "Other"
+    pub category: String, // "Trade", "Signing", "Other"
     pub published_at: DateTime<Utc>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NewsSource {
@@ -77,15 +76,28 @@ impl NewsItem {
 
         // トレード関連のキーワード
         let trade_keywords = [
-            "trade", "traded", "trading", "acquire", "acquired", "deal", 
-            "swap", "move", "moving", "sent to", "ships", "sending"
+            "trade", "traded", "trading", "acquire", "acquired", "deal", "swap", "move", "moving",
+            "sent to", "ships", "sending",
         ];
-        
+
         // 契約関連のキーワード
         let signing_keywords = [
-            "sign", "signed", "signing", "agree", "agreed", "contract",
-            "extension", "buyout", "waive", "waived", "release", "released",
-            "re-sign", "resign", "pick up option", "decline option"
+            "sign",
+            "signed",
+            "signing",
+            "agree",
+            "agreed",
+            "contract",
+            "extension",
+            "buyout",
+            "waive",
+            "waived",
+            "release",
+            "released",
+            "re-sign",
+            "resign",
+            "pick up option",
+            "decline option",
         ];
 
         // キーワードチェック
@@ -112,7 +124,7 @@ impl NewsItem {
             // リンクのハッシュを生成
             use std::collections::hash_map::DefaultHasher;
             use std::hash::{Hash, Hasher};
-            
+
             let mut hasher = DefaultHasher::new();
             link.hash(&mut hasher);
             format!("link-{:x}", hasher.finish())
@@ -132,7 +144,10 @@ mod tests {
             "Trade"
         );
         assert_eq!(
-            NewsItem::determine_category("Nets acquire Ben Simmons", Some("The Brooklyn Nets have acquired...")),
+            NewsItem::determine_category(
+                "Nets acquire Ben Simmons",
+                Some("The Brooklyn Nets have acquired...")
+            ),
             "Trade"
         );
         assert_eq!(
@@ -182,7 +197,7 @@ mod tests {
             NewsItem::generate_id(Some("abc123"), "https://example.com"),
             "abc123"
         );
-        
+
         // GUIDがない場合はリンクのハッシュ
         let id = NewsItem::generate_id(None, "https://example.com/news/123");
         assert!(id.starts_with("link-"));

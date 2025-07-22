@@ -29,15 +29,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting GraphQL server...");
 
     // データベース接続の初期化
-    let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
     let pool = SqlitePool::connect(&database_url).await?;
-    
+
     // マイグレーション実行
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await?;
-    
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
     info!("Database initialized");
 
     let schema = create_schema(pool);

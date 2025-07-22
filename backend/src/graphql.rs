@@ -58,18 +58,18 @@ impl Query {
     async fn trade_news(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
         let pool = ctx.data::<SqlitePool>()?;
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         let saved_items = persistence.get_recent_news(100).await?;
-        
+
         // SavedNewsItemからNewsItemに変換してからTradeNewsに変換
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
                 // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
                 let unix_timestamp = item.published_at.unix_timestamp();
-                let published_at = DateTime::<Utc>::from_timestamp(unix_timestamp, 0)
-                    .unwrap_or_else(Utc::now);
-                
+                let published_at =
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+
                 let news_item = NewsItem {
                     id: item.external_id,
                     title: item.title,
@@ -82,7 +82,7 @@ impl Query {
                 TradeNews::from(news_item)
             })
             .collect();
-            
+
         Ok(news)
     }
 
@@ -93,17 +93,17 @@ impl Query {
     ) -> async_graphql::Result<Vec<TradeNews>> {
         let pool = ctx.data::<SqlitePool>()?;
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         let saved_items = persistence.get_news_by_category(&category).await?;
-        
+
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
                 // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
                 let unix_timestamp = item.published_at.unix_timestamp();
-                let published_at = DateTime::<Utc>::from_timestamp(unix_timestamp, 0)
-                    .unwrap_or_else(Utc::now);
-                
+                let published_at =
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+
                 let news_item = NewsItem {
                     id: item.external_id,
                     title: item.title,
@@ -116,7 +116,7 @@ impl Query {
                 TradeNews::from(news_item)
             })
             .collect();
-            
+
         Ok(news)
     }
 
@@ -127,20 +127,20 @@ impl Query {
     ) -> async_graphql::Result<Vec<TradeNews>> {
         let pool = ctx.data::<SqlitePool>()?;
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         // ソース別のフィルタリングは現在のpersistenceに実装されていないので、
         // 全件取得してフィルタリング
         let saved_items = persistence.get_recent_news(200).await?;
-        
+
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .filter(|item| item.source_name.to_lowercase() == source.to_lowercase())
             .map(|item| {
                 // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
                 let unix_timestamp = item.published_at.unix_timestamp();
-                let published_at = DateTime::<Utc>::from_timestamp(unix_timestamp, 0)
-                    .unwrap_or_else(Utc::now);
-                
+                let published_at =
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+
                 let news_item = NewsItem {
                     id: item.external_id,
                     title: item.title,
@@ -153,7 +153,7 @@ impl Query {
                 TradeNews::from(news_item)
             })
             .collect();
-            
+
         Ok(news)
     }
 }

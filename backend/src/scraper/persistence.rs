@@ -169,15 +169,15 @@ pub struct SaveResult {
 /// データベースに保存されたニュースアイテム
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SavedNewsItem {
-    pub id: Option<i64>,  // SQLiteのINTEGER PRIMARY KEYはi64
+    pub id: Option<i64>, // SQLiteのINTEGER PRIMARY KEYはi64
     pub external_id: String,
     pub title: String,
     pub description: Option<String>,
     pub source_name: String,
     pub source_url: String,
     pub category: String,
-    pub is_official: Option<bool>,  // デフォルト値があるため、Option
-    pub published_at: sqlx::types::time::OffsetDateTime,  // SQLiteのTIMESTAMPはOffsetDateTime
+    pub is_official: Option<bool>, // デフォルト値があるため、Option
+    pub published_at: sqlx::types::time::OffsetDateTime, // SQLiteのTIMESTAMPはOffsetDateTime
     pub scraped_at: Option<sqlx::types::time::OffsetDateTime>,
     pub created_at: Option<sqlx::types::time::OffsetDateTime>,
 }
@@ -189,13 +189,10 @@ mod tests {
 
     async fn setup_test_db() -> SqlitePool {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        
+
         // マイグレーション実行
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .unwrap();
-            
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+
         pool
     }
 
