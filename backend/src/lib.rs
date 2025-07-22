@@ -44,5 +44,8 @@ pub mod graphql;
 /// RSSスクレイピング機能
 pub mod scraper;
 
+/// スケジューラー機能
+pub mod scheduler;
+
 /// ユーティリティ関数
 pub mod utils;

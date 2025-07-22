@@ -54,9 +54,17 @@ sea-orm = { version = "1.1", features = ["sqlx-sqlite", "sqlx-postgres", "runtim
 sea-orm-migration = "1.1"
 clap = { version = "4.5.41", features = ["derive"] }
 
+# スケジューラー
+tokio-cron-scheduler = "0.11"
+uuid = { version = "1.11", features = ["v4"] }
+
 [[bin]]
 name = "scrape"
 path = "src/bin/scrape.rs"
+
+[[bin]]
+name = "scheduler"
+path = "src/bin/scheduler.rs"
 
 [dev-dependencies]
 # テスト用
