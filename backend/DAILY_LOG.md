@@ -1,5 +1,72 @@
 # 開発日報
 
+## 2025-07-21
+
+### 実施内容
+
+#### 環境設定
+1. **Codecovトークン設定**（完了）
+   - GitHub Secretsに`CODECOV_TOKEN`を追加
+   - 動作確認用のテストコード追加（PR #10）
+   - カバレッジレポートの自動生成を確認
+
+2. **GitHub Pages設定**（完了）
+   - docsディレクトリとindex.htmlを作成
+   - GitHub Actionsワークフローを設定
+   - 手動でのPages有効化が必要
+
+#### データベース実装（Phase 2）
+3. **基本スキーマ実装**（PR #11）
+   - SQLiteデータベースのセットアップ
+   - `teams`テーブル：NBA全30チームのマスターデータ
+   - `trade_news`テーブル：スクレイピングしたニュースの保存
+   - SQLxによるマイグレーション管理
+
+### 解決した問題
+- SQLxのコンパイル時検証によるCIエラー
+  - `SQLX_OFFLINE=true`を環境変数に追加
+  - マクロを使わないシンプルな実装に変更
+- フォーマットエラーの修正
+
+### 未完了タスク
+- NewsItemモデルの拡張（ID、説明文、カテゴリー追加）
+- スクレイピングデータの永続化ロジック
+- 定期実行ジョブの実装
+
+### CI/CD最終結果
+- ✅ Build Documentation
+- ✅ Check Commit Messages
+- ✅ Generate Coverage Report
+- ✅ Test
+- ✅ Security Audit
+- ✅ Auto Label PR
+
+全てのCIチェックが成功。PR #11はマージ可能な状態。
+
+### 次回の作業候補
+
+#### 開発タスク
+1. **NewsItemモデルの拡張**
+   - IDフィールドの追加（RSS GUIDやリンクを使用）
+   - 説明文とカテゴリーフィールドの追加
+   - カテゴリー判定ロジックの実装
+
+2. **スクレイピングデータの保存**
+   - persistenceモジュールの完成
+   - 重複チェック機能
+   - トランザクション処理
+
+3. **定期実行ジョブ**
+   - cronジョブまたはsystemdタイマーの設定
+   - 5分間隔での実行
+   - エラーハンドリングとリトライ
+
+### 参考リンク
+- [MVP タスクリスト](MVP_TASKS.md)
+- [データベース設計](DATABASE_SCHEMA.md)
+- [開発環境README](README.md)
+- [進捗サマリー](PROGRESS_SUMMARY.md)
+
 ## 2025-07-20
 
 ### 実施内容
@@ -54,8 +121,3 @@
 3. **日本語翻訳機能の準備**
    - 翻訳APIの調査
    - translation_statusフィールドの活用
-
-### 参考リンク
-- [MVP タスクリスト](MVP_TASKS.md)
-- [データベース設計](DATABASE_SCHEMA.md)
-- [開発環境README](README.md)
