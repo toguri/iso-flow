@@ -269,4 +269,3 @@ mod tests {
         assert_eq!(recent[1].title, "Recent News 1");
     }
 }
-
