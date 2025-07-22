@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO trade_news (\n                external_id, title, description, source_name, source_url,\n                category, published_at, scraped_at, created_at, updated_at\n            )\n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "ba01a77baec6270e2b9981813b324a23c4a172eca5413c70f204c25518a6f262"
+}
