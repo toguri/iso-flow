@@ -135,4 +135,90 @@ mod tests {
             }
         }
     }
+    
+    #[test]
+    fn test_parse_rss_item_with_valid_data() {
+        let parser = RssParser::new();
+        
+        // 有効なRSSアイテムのモック
+        let mut item = rss::Item::default();
+        item.set_title(Some("Lakers Trade for Star Player".to_string()));
+        item.set_link(Some("https://example.com/news/123".to_string()));
+        item.set_description(Some("The Lakers have completed a trade...".to_string()));
+        item.set_pub_date(Some("Mon, 22 Jul 2024 10:00:00 GMT".to_string()));
+        item.set_guid(Some(rss::Guid {
+            value: "unique-guid-123".to_string(),
+            permalink: false,
+        }));
+        
+        let news = parser.parse_rss_item(&item, &NewsSource::ESPN);
+        assert!(news.is_some());
+        
+        let news = news.unwrap();
+        assert_eq!(news.id, "unique-guid-123");
+        assert_eq!(news.title, "Lakers Trade for Star Player");
+        assert_eq!(news.link, "https://example.com/news/123");
+        assert_eq!(news.description, Some("The Lakers have completed a trade...".to_string()));
+        assert_eq!(news.category, "Trade");
+    }
+    
+    #[test]
+    fn test_parse_rss_item_without_title() {
+        let parser = RssParser::new();
+        
+        // タイトルなしのRSSアイテム
+        let mut item = rss::Item::default();
+        item.set_link(Some("https://example.com/news/123".to_string()));
+        
+        let news = parser.parse_rss_item(&item, &NewsSource::ESPN);
+        assert!(news.is_none());
+    }
+    
+    #[test]
+    fn test_parse_rss_item_without_link() {
+        let parser = RssParser::new();
+        
+        // リンクなしのRSSアイテム
+        let mut item = rss::Item::default();
+        item.set_title(Some("Test Title".to_string()));
+        
+        let news = parser.parse_rss_item(&item, &NewsSource::ESPN);
+        assert!(news.is_none());
+    }
+    
+    #[test]
+    fn test_parse_rss_item_without_guid() {
+        let parser = RssParser::new();
+        
+        // GUIDなしのRSSアイテム（リンクのハッシュが使われる）
+        let mut item = rss::Item::default();
+        item.set_title(Some("Test News".to_string()));
+        item.set_link(Some("https://example.com/news/456".to_string()));
+        
+        let news = parser.parse_rss_item(&item, &NewsSource::RealGM);
+        assert!(news.is_some());
+        
+        let news = news.unwrap();
+        assert!(news.id.starts_with("link-"));
+    }
+    
+    #[test]
+    fn test_parse_rss_item_with_invalid_date() {
+        let parser = RssParser::new();
+        
+        // 無効な日付のRSSアイテム
+        let mut item = rss::Item::default();
+        item.set_title(Some("Test News".to_string()));
+        item.set_link(Some("https://example.com/news/789".to_string()));
+        item.set_pub_date(Some("Invalid Date Format".to_string()));
+        
+        let news = parser.parse_rss_item(&item, &NewsSource::ESPN);
+        assert!(news.is_some());
+        
+        let news = news.unwrap();
+        // 無効な日付の場合は現在時刻が使われる
+        let now = Utc::now();
+        let diff = now.timestamp() - news.published_at.timestamp();
+        assert!(diff < 5); // 5秒以内
+    }
 }
