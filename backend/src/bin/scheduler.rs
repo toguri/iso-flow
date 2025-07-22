@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
 
     // マイグレーション実行
     sqlx::migrate!("./migrations").run(&pool).await?;
-    
+
     info!("Database initialized");
 
     // 起動時に即座に実行するオプション
@@ -54,13 +54,13 @@ async fn main() -> Result<()> {
     // スケジューラー作成・開始
     let mut scheduler = create_scheduler(pool).await?;
     scheduler.start().await?;
-    
+
     info!("Scheduler started. Press Ctrl+C to stop.");
     info!("Jobs will run every 5 minutes at :00, :05, :10, :15, etc.");
 
     // Ctrl+Cを待つ
     signal::ctrl_c().await?;
-    
+
     info!("Shutting down scheduler...");
     scheduler.shutdown().await?;
     info!("Scheduler stopped successfully");
