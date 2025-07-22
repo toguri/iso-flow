@@ -5,11 +5,15 @@ use axum::{
     http::{Request, StatusCode},
 };
 use nba_trade_scraper::graphql::{create_schema, graphql_routes};
+use sqlx::SqlitePool;
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn test_graphql_playground() {
-    let schema = create_schema();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    
+    let schema = create_schema(pool);
     let app = graphql_routes(schema);
 
     let response = app
@@ -28,7 +32,10 @@ async fn test_graphql_playground() {
 
 #[tokio::test]
 async fn test_trade_news_query() {
-    let schema = create_schema();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    
+    let schema = create_schema(pool);
     let app = graphql_routes(schema);
 
     let query = r#"{
@@ -52,7 +59,10 @@ async fn test_trade_news_query() {
 
 #[tokio::test]
 async fn test_trade_news_by_category_query() {
-    let schema = create_schema();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    
+    let schema = create_schema(pool);
     let app = graphql_routes(schema);
 
     let query = r#"{
@@ -76,7 +86,10 @@ async fn test_trade_news_by_category_query() {
 
 #[tokio::test]
 async fn test_trade_news_by_source_query() {
-    let schema = create_schema();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    
+    let schema = create_schema(pool);
     let app = graphql_routes(schema);
 
     let query = r#"{
@@ -100,7 +113,10 @@ async fn test_trade_news_by_source_query() {
 
 #[tokio::test]
 async fn test_invalid_query() {
-    let schema = create_schema();
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    
+    let schema = create_schema(pool);
     let app = graphql_routes(schema);
 
     let query = r#"{

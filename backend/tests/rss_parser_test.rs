@@ -53,8 +53,8 @@ async fn test_parse_rss_feed() {
         .await
         .expect("Failed to fetch feed");
 
-    // 結果を検証 - トレード関連のニュースのみが取得される
-    assert_eq!(news_items.len(), 2);
+    // 結果を検証 - 全てのニュースが取得される（フィルタリングは行わない）
+    assert_eq!(news_items.len(), 3);
 
     // トレード記事が正しく取得されているか確認
     let trade_news = news_items
@@ -62,6 +62,7 @@ async fn test_parse_rss_feed() {
         .find(|n| n.title.contains("Lakers trade"))
         .expect("Trade news not found");
     assert_eq!(trade_news.title, "Lakers trade for star player");
+    assert_eq!(trade_news.category, "Trade");
 
     // サイン記事が正しく取得されているか確認
     let signing_news = news_items
@@ -69,12 +70,14 @@ async fn test_parse_rss_feed() {
         .find(|n| n.title.contains("Warriors sign"))
         .expect("Signing news not found");
     assert_eq!(signing_news.title, "Warriors sign veteran guard");
+    assert_eq!(signing_news.category, "Signing");
 
-    // トレード関連でない記事は除外されているか確認
-    let has_other_news = news_items
+    // Other記事も取得される
+    let other_news = news_items
         .iter()
-        .any(|n| n.title.contains("playoff predictions"));
-    assert!(!has_other_news, "Non-trade news should be filtered out");
+        .find(|n| n.title.contains("playoff predictions"))
+        .expect("Other news not found");
+    assert_eq!(other_news.category, "Other");
 }
 
 #[tokio::test]
