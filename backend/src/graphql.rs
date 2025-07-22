@@ -10,8 +10,9 @@
 
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
+use sqlx::SqlitePool;
 
-use crate::scraper::{RssParser, TradeNews as ScraperTradeNews};
+use crate::scraper::{NewsItem, NewsPersistence};
 
 /// GraphQLで返されるトレードニュースの構造体
 #[derive(SimpleObject)]
@@ -20,6 +21,8 @@ pub struct TradeNews {
     pub id: String,
     /// ニュースのタイトル
     pub title: String,
+    /// ニュースの説明文
+    pub description: Option<String>,
     /// ニュースへのリンク
     pub link: String,
     /// ニュースソース（ESPN、RealGMなど）
@@ -30,29 +33,16 @@ pub struct TradeNews {
     pub category: String,
 }
 
-impl From<ScraperTradeNews> for TradeNews {
-    fn from(item: ScraperTradeNews) -> Self {
-        let category = if item.title.to_lowercase().contains("trade")
-            || item.title.to_lowercase().contains("acquire")
-            || item.title.to_lowercase().contains("deal")
-        {
-            "Trade".to_string()
-        } else if item.title.to_lowercase().contains("sign")
-            || item.title.to_lowercase().contains("agree")
-            || item.title.to_lowercase().contains("buyout")
-        {
-            "Signing".to_string()
-        } else {
-            "Other".to_string()
-        };
-
+impl From<NewsItem> for TradeNews {
+    fn from(item: NewsItem) -> Self {
         TradeNews {
             id: item.id,
             title: item.title,
+            description: item.description,
             link: item.link,
             source: item.source.to_string(),
             published_at: item.published_at,
-            category,
+            category: item.category,
         }
     }
 }
@@ -62,53 +52,118 @@ pub struct Query;
 
 #[Object]
 impl Query {
-    /// 全てのトレードニュースを取得します
+    /// 全てのトレードニュースを取得します（データベースから）
     ///
-    /// トレード関連のキーワードを含むニュースのみを返します
-    async fn trade_news(&self, _ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
-        let parser = RssParser::new();
-        let news = parser.fetch_all_feeds().await?;
+    /// 最新100件のニュースを返します
+    async fn trade_news(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let persistence = NewsPersistence::new(pool.clone());
 
-        Ok(news.into_iter().map(TradeNews::from).collect())
+        let saved_items = persistence.get_recent_news(100).await?;
+
+        // SavedNewsItemからNewsItemに変換してからTradeNewsに変換
+        let news: Vec<TradeNews> = saved_items
+            .into_iter()
+            .map(|item| {
+                // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
+                let unix_timestamp = item.published_at.unix_timestamp();
+                let published_at =
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+
+                let news_item = NewsItem {
+                    id: item.external_id,
+                    title: item.title,
+                    description: item.description,
+                    link: item.source_url,
+                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    category: item.category,
+                    published_at,
+                };
+                TradeNews::from(news_item)
+            })
+            .collect();
+
+        Ok(news)
     }
 
     async fn trade_news_by_category(
         &self,
-        _ctx: &Context<'_>,
+        ctx: &Context<'_>,
         category: String,
     ) -> async_graphql::Result<Vec<TradeNews>> {
-        let parser = RssParser::new();
-        let news = parser.fetch_all_feeds().await?;
+        let pool = ctx.data::<SqlitePool>()?;
+        let persistence = NewsPersistence::new(pool.clone());
 
-        let trade_news: Vec<TradeNews> = news.into_iter().map(TradeNews::from).collect();
+        let saved_items = persistence.get_news_by_category(&category).await?;
 
-        Ok(trade_news
+        let news: Vec<TradeNews> = saved_items
             .into_iter()
-            .filter(|n| n.category.to_lowercase() == category.to_lowercase())
-            .collect())
+            .map(|item| {
+                // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
+                let unix_timestamp = item.published_at.unix_timestamp();
+                let published_at =
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+
+                let news_item = NewsItem {
+                    id: item.external_id,
+                    title: item.title,
+                    description: item.description,
+                    link: item.source_url,
+                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    category: item.category,
+                    published_at,
+                };
+                TradeNews::from(news_item)
+            })
+            .collect();
+
+        Ok(news)
     }
 
     async fn trade_news_by_source(
         &self,
-        _ctx: &Context<'_>,
+        ctx: &Context<'_>,
         source: String,
     ) -> async_graphql::Result<Vec<TradeNews>> {
-        let parser = RssParser::new();
-        let news = parser.fetch_all_feeds().await?;
+        let pool = ctx.data::<SqlitePool>()?;
+        let persistence = NewsPersistence::new(pool.clone());
 
-        let trade_news: Vec<TradeNews> = news.into_iter().map(TradeNews::from).collect();
+        // ソース別のフィルタリングは現在のpersistenceに実装されていないので、
+        // 全件取得してフィルタリング
+        let saved_items = persistence.get_recent_news(200).await?;
 
-        Ok(trade_news
+        let news: Vec<TradeNews> = saved_items
             .into_iter()
-            .filter(|n| n.source.to_lowercase() == source.to_lowercase())
-            .collect())
+            .filter(|item| item.source_name.to_lowercase() == source.to_lowercase())
+            .map(|item| {
+                // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
+                let unix_timestamp = item.published_at.unix_timestamp();
+                let published_at =
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+
+                let news_item = NewsItem {
+                    id: item.external_id,
+                    title: item.title,
+                    description: item.description,
+                    link: item.source_url,
+                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    category: item.category,
+                    published_at,
+                };
+                TradeNews::from(news_item)
+            })
+            .collect();
+
+        Ok(news)
     }
 }
 
 pub type QueryRoot = Query;
 
-pub fn create_schema() -> Schema<Query, EmptyMutation, EmptySubscription> {
-    Schema::new(Query, EmptyMutation, EmptySubscription)
+pub fn create_schema(pool: SqlitePool) -> Schema<Query, EmptyMutation, EmptySubscription> {
+    Schema::build(Query, EmptyMutation, EmptySubscription)
+        .data(pool)
+        .finish()
 }
 
 pub fn graphql_routes(schema: Schema<Query, EmptyMutation, EmptySubscription>) -> axum::Router {

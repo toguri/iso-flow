@@ -4,7 +4,7 @@ use reqwest::Client;
 use rss::Channel;
 use tracing::{debug, error, info};
 
-use crate::scraper::models::{NewsSource, RssFeed, TradeNews, RSS_FEEDS};
+use crate::scraper::models::{NewsItem, NewsSource, RssFeed, RSS_FEEDS};
 
 pub struct RssParser {
     client: Client,
@@ -26,7 +26,7 @@ impl RssParser {
         }
     }
 
-    pub async fn fetch_all_feeds(&self) -> Result<Vec<TradeNews>> {
+    pub async fn fetch_all_feeds(&self) -> Result<Vec<NewsItem>> {
         let mut all_news = Vec::new();
 
         for (url, source) in RSS_FEEDS {
@@ -45,7 +45,7 @@ impl RssParser {
         Ok(all_news)
     }
 
-    pub async fn fetch_feed(&self, feed: &RssFeed) -> Result<Vec<TradeNews>> {
+    pub async fn fetch_feed(&self, feed: &RssFeed) -> Result<Vec<NewsItem>> {
         info!("Fetching RSS feed from: {}", feed.url);
 
         let response = self
@@ -66,20 +66,18 @@ impl RssParser {
 
         for item in channel.items() {
             if let Some(news) = self.parse_rss_item(item, &feed.source) {
-                if self.is_trade_related(&news) {
-                    debug!("Found trade-related news: {}", news.title);
-                    news_items.push(news);
-                }
+                debug!("Found news item: {} [{}]", news.title, news.category);
+                news_items.push(news);
             }
         }
 
         Ok(news_items)
     }
 
-    fn parse_rss_item(&self, item: &rss::Item, source: &NewsSource) -> Option<TradeNews> {
+    fn parse_rss_item(&self, item: &rss::Item, source: &NewsSource) -> Option<NewsItem> {
         let title = item.title()?.to_string();
         let link = item.link()?.to_string();
-        let description = item.description().unwrap_or("").to_string();
+        let description = item.description().map(|s| s.to_string());
 
         let published_at = item
             .pub_date()
@@ -87,35 +85,22 @@ impl RssParser {
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
 
-        let id = item
-            .guid()
-            .map(|g| g.value().to_string())
-            .unwrap_or_else(|| format!("{}-{}", source, published_at.timestamp()));
+        // GUIDからIDを生成、なければリンクのハッシュを使用
+        let guid = item.guid().map(|g| g.value());
+        let id = NewsItem::generate_id(guid, &link);
 
-        Some(TradeNews {
+        // カテゴリーを判定
+        let category = NewsItem::determine_category(&title, description.as_deref());
+
+        Some(NewsItem {
             id,
             title,
             description,
             link,
             published_at,
             source: source.clone(),
-            is_trade: false, // Will be determined by is_trade_related
+            category,
         })
-    }
-
-    fn is_trade_related(&self, news: &TradeNews) -> bool {
-        let keywords = vec![
-            "trade", "traded", "acquire", "acquired", "deal", "sign", "waive", "waived", "buyout",
-            "release", "released", "exchange", "send", "sent", "receive", "swap",
-        ];
-
-        let text = format!(
-            "{} {}",
-            news.title.to_lowercase(),
-            news.description.to_lowercase()
-        );
-
-        keywords.iter().any(|keyword| text.contains(keyword))
     }
 }
 
@@ -132,9 +117,21 @@ mod tests {
         let news = result.unwrap();
 
         if !news.is_empty() {
-            println!("Found {} trade-related news items", news.len());
-            for item in news.iter().take(5) {
-                println!("- {} ({})", item.title, item.source);
+            println!("Found {} news items", news.len());
+
+            // カテゴリー別に集計
+            let trade_count = news.iter().filter(|n| n.category == "Trade").count();
+            let signing_count = news.iter().filter(|n| n.category == "Signing").count();
+            let other_count = news.iter().filter(|n| n.category == "Other").count();
+
+            println!(
+                "Categories: Trade={}, Signing={}, Other={}",
+                trade_count, signing_count, other_count
+            );
+
+            println!("\nSample news:");
+            for item in news.iter().take(10) {
+                println!("- [{}] {} ({})", item.category, item.title, item.source);
             }
         }
     }
