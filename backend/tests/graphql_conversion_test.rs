@@ -93,7 +93,10 @@ fn test_optional_description() {
         published_at: Utc::now(),
     };
     let trade_with_desc = TradeNews::from(with_desc);
-    assert_eq!(trade_with_desc.description, Some("Description text".to_string()));
+    assert_eq!(
+        trade_with_desc.description,
+        Some("Description text".to_string())
+    );
 
     // Without description
     let without_desc = NewsItem {
