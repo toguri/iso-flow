@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - ISO-Flow Tech News</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #1976d2;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .loading {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .news-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .news-item h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .news-meta {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>GraphQL API Test Page</h1>
+        <p>Test the GraphQL API endpoints for the ISO-Flow Tech News application.</p>
+        
+        <div>
+            <button onclick="testConnection()">Test Connection</button>
+            <button onclick="fetchAllNews()">Fetch All News</button>
+            <button onclick="fetchByCategory('TECHNOLOGY')">Fetch Technology News</button>
+            <button onclick="fetchByCategory('PROGRAMMING')">Fetch Programming News</button>
+            <button onclick="fetchByCategory('AI')">Fetch AI News</button>
+        </div>
+        
+        <div id="status" class="status loading">
+            Ready to test...
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Response:</h2>
+        <pre id="response">No data yet...</pre>
+    </div>
+    
+    <div class="test-container">
+        <h2>News Items:</h2>
+        <div id="news-container">
+            <p>Click a button above to fetch news items.</p>
+        </div>
+    </div>
+    
+    <script>
+        const GRAPHQL_ENDPOINT = 'http://localhost:8080/graphql';
+        
+        function updateStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+        
+        function updateResponse(data) {
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        function displayNews(newsItems) {
+            const container = document.getElementById('news-container');
+            
+            if (!newsItems || newsItems.length === 0) {
+                container.innerHTML = '<p>No news items found.</p>';
+                return;
+            }
+            
+            container.innerHTML = newsItems.map(item => `
+                <div class="news-item">
+                    <h3>${item.title}</h3>
+                    <p>${item.description}</p>
+                    <div class="news-meta">
+                        <span class="category-badge">${item.category}</span>
+                        <span> | ${formatDate(item.pubDate)}</span>
+                        <span> | <a href="${item.link}" target="_blank">Read more</a></span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}.${month}.${day} 日本時間`;
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        async function testConnection() {
+            updateStatus('Testing connection...', 'loading');
+            
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: '{ __typename }'
+                    })
+                });
+                
+                const data = await response.json();
+                updateResponse(data);
+                
+                if (response.ok) {
+                    updateStatus('Connection successful!', 'success');
+                } else {
+                    updateStatus('Connection failed: ' + response.status, 'error');
+                }
+            } catch (error) {
+                updateStatus('Connection error: ' + error.message, 'error');
+                updateResponse({ error: error.message });
+            }
+        }
+        
+        async function fetchAllNews() {
+            updateStatus('Fetching all news...', 'loading');
+            
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: `
+                            query {
+                                newsItems {
+                                    id
+                                    title
+                                    description
+                                    link
+                                    pubDate
+                                    category
+                                    sourceUrl
+                                    createdAt
+                                    updatedAt
+                                }
+                            }
+                        `
+                    })
+                });
+                
+                const data = await response.json();
+                updateResponse(data);
+                
+                if (data.data && data.data.newsItems) {
+                    updateStatus(`Fetched ${data.data.newsItems.length} news items`, 'success');
+                    displayNews(data.data.newsItems);
+                } else if (data.errors) {
+                    updateStatus('GraphQL error: ' + data.errors[0].message, 'error');
+                } else {
+                    updateStatus('No data received', 'error');
+                }
+            } catch (error) {
+                updateStatus('Fetch error: ' + error.message, 'error');
+                updateResponse({ error: error.message });
+            }
+        }
+        
+        async function fetchByCategory(category) {
+            updateStatus(`Fetching ${category} news...`, 'loading');
+            
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: `
+                            query GetNewsItems($category: String) {
+                                newsItems(category: $category) {
+                                    id
+                                    title
+                                    description
+                                    link
+                                    pubDate
+                                    category
+                                    sourceUrl
+                                    createdAt
+                                    updatedAt
+                                }
+                            }
+                        `,
+                        variables: {
+                            category: category
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                updateResponse(data);
+                
+                if (data.data && data.data.newsItems) {
+                    updateStatus(`Fetched ${data.data.newsItems.length} ${category} news items`, 'success');
+                    displayNews(data.data.newsItems);
+                } else if (data.errors) {
+                    updateStatus('GraphQL error: ' + data.errors[0].message, 'error');
+                } else {
+                    updateStatus('No data received', 'error');
+                }
+            } catch (error) {
+                updateStatus('Fetch error: ' + error.message, 'error');
+                updateResponse({ error: error.message });
+            }
+        }
+        
+        // Test connection on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('API Test page loaded');
+        });
+    </script>
+</body>
+</html>

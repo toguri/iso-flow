@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test - ISO-Flow Tech News</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1976d2;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .loading {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Simple Test Page</h1>
+        <p>This is a simple test page to verify the frontend build and basic functionality.</p>
+        
+        <div id="status" class="status loading">
+            Loading JavaScript...
+        </div>
+        
+        <h2>Test Results:</h2>
+        <pre id="results">Waiting for results...</pre>
+    </div>
+    
+    <script>
+        // Simple test to verify JavaScript is loaded
+        window.addEventListener('DOMContentLoaded', function() {
+            const statusEl = document.getElementById('status');
+            const resultsEl = document.getElementById('results');
+            
+            try {
+                // Test basic JavaScript functionality
+                const tests = {
+                    'DOM Loaded': true,
+                    'JavaScript Enabled': true,
+                    'Console Available': typeof console !== 'undefined',
+                    'Fetch API Available': typeof fetch !== 'undefined',
+                    'Local Storage Available': typeof localStorage !== 'undefined',
+                    'Current Date': new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+                };
+                
+                statusEl.className = 'status success';
+                statusEl.textContent = 'All tests passed!';
+                resultsEl.textContent = JSON.stringify(tests, null, 2);
+                
+                // Test console output
+                console.log('Simple test page loaded successfully');
+                console.log('Test results:', tests);
+                
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'Error: ' + error.message;
+                resultsEl.textContent = error.stack || error.toString();
+            }
+        });
+    </script>
+</body>
+</html>
