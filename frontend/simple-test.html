@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Kotlin Test</title>
+</head>
+<body>
+    <div id="root">Loading...</div>
+    <script src="build/dist/js/productionExecutable/nba-trade-tracker-frontend.js"></script>
+    <script>
+        console.log("Script loaded");
+        // デバッグ情報を追加
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            if (root.innerHTML === 'Loading...') {
+                console.error('Kotlin app did not mount');
+                root.innerHTML = 'Error: Kotlin app failed to mount';
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
