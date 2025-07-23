@@ -4,6 +4,7 @@ use axum::{response::Html, routing::get, serve, Router};
 use nba_trade_scraper::graphql::{create_schema, Query};
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -40,13 +41,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let schema = create_schema(pool);
 
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/", get(graphiql).post(graphql_handler))
+        .layer(cors)
         .layer(axum::extract::Extension(schema));
 
-    info!("GraphQL playground available at http://localhost:3000");
+    info!("GraphQL playground available at http://localhost:8000");
 
-    let listener = TcpListener::bind("0.0.0.0:3000").await?;
+    let listener = TcpListener::bind("0.0.0.0:8000").await?;
     serve(listener, app).await?;
 
     Ok(())
