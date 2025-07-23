@@ -4,19 +4,11 @@ import androidx.compose.runtime.Composable
 import models.NewsItem
 import org.jetbrains.compose.web.css.*
 import org.jetbrains.compose.web.dom.*
-@JsName("Date")
-external class JsDate(dateString: String) {
-    fun getFullYear(): Int
-    fun getMonth(): Int
-    fun getDate(): Int
-}
+external fun Date(dateString: String): dynamic
 
 fun formatDate(dateString: String): String {
-    val date = JsDate(dateString)
-    val year = date.getFullYear()
-    val month = (date.getMonth() + 1).toString().padStart(2, '0')
-    val day = date.getDate().toString().padStart(2, '0')
-    return "$year.$month.$day (日本時間)"
+    val date = Date(dateString)
+    return date.toLocaleString("ja-JP")
 }
 
 fun stripHtml(html: String): String {
