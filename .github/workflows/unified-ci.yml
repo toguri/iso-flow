@@ -258,13 +258,26 @@ jobs:
           file: ./backend/cobertura.xml
           flags: backend
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ステップ6.5: Codecovダミーステータス（スキップ時用）
+  codecov-skip:
+    name: Codecov Skip Status
+    runs-on: ubuntu-latest
+    needs: [analyze-pr]
+    if: needs.analyze-pr.outputs.skip_coverage == 'true'
+    steps:
+      - name: Skip Codecov
+        run: |
+          echo "⏭️ Codecov checks skipped for this PR type"
+          echo "This is a placeholder job for when coverage is not needed"
 
   # ステップ7: 最終ステータスチェック
   final-status:
     name: Final Status Check
     runs-on: ubuntu-latest
     if: always()
-    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, security-audit, docs-check, coverage]
+    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, security-audit, docs-check, coverage, codecov-skip]
     steps:
       - name: Check PR Type
         run: |
