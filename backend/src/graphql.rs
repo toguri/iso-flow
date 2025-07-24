@@ -8,11 +8,12 @@
 //! - `tradeNewsByCategory`: カテゴリー別にニュースを取得
 //! - `tradeNewsBySource`: ソース別にニュースを取得
 
-use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema, SimpleObject};
+use async_graphql::{Context, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
+use tracing::info;
 
-use crate::scraper::{NewsItem, NewsPersistence};
+use crate::scraper::{NewsItem, NewsPersistence, RssParser};
 
 /// GraphQLで返されるトレードニュースの構造体
 #[derive(SimpleObject)]
@@ -158,20 +159,74 @@ impl Query {
     }
 }
 
+/// GraphQLミューテーションのルート
+pub struct Mutation;
+
+#[Object]
+impl Mutation {
+    /// RSSフィードをスクレイピングしてデータベースに保存
+    async fn scrape_rss(&self, ctx: &Context<'_>) -> async_graphql::Result<ScrapeResult> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let persistence = NewsPersistence::new(pool.clone());
+
+        info!("Starting RSS scraping via GraphQL mutation...");
+
+        // RSSフィードをパース
+        let parser = RssParser::new();
+        let news_items = parser.fetch_all_feeds().await?;
+
+        info!("Fetched {} items from RSS feeds", news_items.len());
+
+        // データベースに保存
+        let save_result = persistence.save_news_items(news_items).await?;
+
+        info!(
+            "Scraping completed: {} saved, {} skipped, {} errors",
+            save_result.saved_count,
+            save_result.skipped_count,
+            save_result.errors.len()
+        );
+
+        Ok(ScrapeResult {
+            saved_count: save_result.saved_count as i32,
+            skipped_count: save_result.skipped_count as i32,
+            error_count: save_result.errors.len() as i32,
+            errors: save_result
+                .errors
+                .into_iter()
+                .map(|(id, msg)| format!("{id}: {msg}"))
+                .collect(),
+        })
+    }
+}
+
+/// スクレイピング結果
+#[derive(SimpleObject)]
+pub struct ScrapeResult {
+    /// 新規保存されたアイテム数
+    pub saved_count: i32,
+    /// 重複のためスキップされたアイテム数
+    pub skipped_count: i32,
+    /// エラー数
+    pub error_count: i32,
+    /// エラーメッセージのリスト
+    pub errors: Vec<String>,
+}
+
 pub type QueryRoot = Query;
 
-pub fn create_schema(pool: SqlitePool) -> Schema<Query, EmptyMutation, EmptySubscription> {
-    Schema::build(Query, EmptyMutation, EmptySubscription)
+pub fn create_schema(pool: SqlitePool) -> Schema<Query, Mutation, EmptySubscription> {
+    Schema::build(Query, Mutation, EmptySubscription)
         .data(pool)
         .finish()
 }
 
-pub fn graphql_routes(schema: Schema<Query, EmptyMutation, EmptySubscription>) -> axum::Router {
+pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
     use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
     use axum::{extract::State, response::Html, routing::get, Router};
 
     async fn graphql_handler(
-        State(schema): State<Schema<Query, EmptyMutation, EmptySubscription>>,
+        State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
         req: GraphQLRequest,
     ) -> GraphQLResponse {
         schema.execute(req.into_inner()).await.into()
