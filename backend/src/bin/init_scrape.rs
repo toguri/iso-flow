@@ -37,7 +37,9 @@ async fn main() -> Result<()> {
 
     info!(
         "Initial scraping completed: {} saved, {} skipped, {} errors",
-        result.saved_count, result.skipped_count, result.errors.len()
+        result.saved_count,
+        result.skipped_count,
+        result.errors.len()
     );
 
     if !result.errors.is_empty() {
