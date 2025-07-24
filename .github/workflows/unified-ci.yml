@@ -233,7 +233,7 @@ jobs:
 
   # ステップ6: カバレッジレポート（条件付き実行）
   coverage:
-    name: Code Coverage
+    name: Generate Coverage Report
     runs-on: ubuntu-latest
     needs: [analyze-pr, common-checks]
     if: needs.analyze-pr.outputs.skip_coverage != 'true'
