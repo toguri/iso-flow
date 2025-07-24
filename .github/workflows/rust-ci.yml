@@ -1,12 +1,9 @@
 name: Rust CI
 
+# このワークフローはPR時はunified-ci.ymlに統合されました
+# PRがmainにマージされた後のみ実行（品質確認用）
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/rust-ci.yml'
-  pull_request:
     branches: [ main ]
     paths:
       - 'backend/**'

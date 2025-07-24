@@ -1,13 +1,9 @@
 name: Documentation
 
+# このワークフローはPR時はunified-ci.ymlに統合されました
+# PRがmainにマージされた後のみ実行（ドキュメント生成用）
 on:
   push:
-    branches: [ main ]
-    paths:
-      - 'backend/src/**'
-      - 'backend/Cargo.toml'
-      - '.github/workflows/docs.yml'
-  pull_request:
     branches: [ main ]
     paths:
       - 'backend/src/**'

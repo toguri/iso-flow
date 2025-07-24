@@ -1,8 +1,9 @@
 name: PR Check
 
+# このワークフローはunified-ci.ymlに統合されました
+# 一時的に無効化
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 jobs:
   check-commits:

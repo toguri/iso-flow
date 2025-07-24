@@ -1,0 +1,337 @@
+name: Unified CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+
+jobs:
+  # ステップ1: PR分析 - PRのタイプと必要なチェックを判定
+  analyze-pr:
+    name: Analyze PR
+    runs-on: ubuntu-latest
+    outputs:
+      pr_type: ${{ steps.analyze.outputs.pr_type }}
+      skip_tests: ${{ steps.analyze.outputs.skip_tests }}
+      skip_build: ${{ steps.analyze.outputs.skip_build }}
+      skip_coverage: ${{ steps.analyze.outputs.skip_coverage }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze PR Type and Changes
+        id: analyze
+        run: |
+          echo "🔍 Analyzing PR..."
+          
+          # PR タイトルからタイプを判定
+          TITLE="${{ github.event.pull_request.title }}"
+          
+          if [[ "$TITLE" =~ ^revert:|^chore:.*revert ]]; then
+            echo "pr_type=revert" >> $GITHUB_OUTPUT
+            echo "skip_tests=true" >> $GITHUB_OUTPUT
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            echo "skip_coverage=true" >> $GITHUB_OUTPUT
+            echo "📌 Detected: Revert PR"
+          elif [[ "$TITLE" =~ ^docs: ]]; then
+            echo "pr_type=docs" >> $GITHUB_OUTPUT
+            echo "skip_tests=true" >> $GITHUB_OUTPUT
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            echo "skip_coverage=true" >> $GITHUB_OUTPUT
+            echo "📚 Detected: Documentation PR"
+          elif [[ "$TITLE" =~ ^ci:|^chore:.*ci ]]; then
+            echo "pr_type=ci" >> $GITHUB_OUTPUT
+            echo "skip_tests=false" >> $GITHUB_OUTPUT
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            echo "skip_coverage=true" >> $GITHUB_OUTPUT
+            echo "🔧 Detected: CI/CD PR"
+          else
+            # コード変更の有無をチェック
+            if git diff --name-only origin/main..HEAD | grep -qE '\.(rs|toml)$'; then
+              echo "pr_type=code" >> $GITHUB_OUTPUT
+              echo "skip_tests=false" >> $GITHUB_OUTPUT
+              echo "skip_build=false" >> $GITHUB_OUTPUT
+              echo "skip_coverage=false" >> $GITHUB_OUTPUT
+              echo "💻 Detected: Code Change PR"
+            else
+              echo "pr_type=other" >> $GITHUB_OUTPUT
+              echo "skip_tests=true" >> $GITHUB_OUTPUT
+              echo "skip_build=true" >> $GITHUB_OUTPUT
+              echo "skip_coverage=true" >> $GITHUB_OUTPUT
+              echo "📦 Detected: Other PR (no code changes)"
+            fi
+          fi
+
+  # ステップ2: コミットメッセージチェック（必須チェック用）
+  check-commit-messages:
+    name: Check Commit Messages
+    runs-on: ubuntu-latest
+    needs: analyze-pr
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Commit Messages
+        run: |
+          echo "📝 Checking commit messages..."
+          
+          # マージコミットを除外してコミットメッセージを検証
+          git log --format=%s --no-merges origin/main..HEAD | while read -r commit_msg; do
+            if ! echo "$commit_msg" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|ci|revert):'; then
+              echo "❌ Invalid commit message: $commit_msg"
+              echo "Commit messages should start with: feat:, fix:, docs:, style:, refactor:, test:, chore:, ci:, or revert:"
+              exit 1
+            fi
+          done
+          echo "✅ All commit messages are valid"
+
+  # ステップ2.5: Auto Label PR（必須チェック用）
+  auto-label-pr:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    needs: analyze-pr
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auto Label PR
+        if: github.event_name == 'pull_request'
+        uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  # ステップ2.6: 共通チェック（すべてのPRで実行）
+  common-checks:
+    name: Common Checks
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, check-commit-messages, auto-label-pr]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate PR Format
+        run: |
+          echo "🔍 Validating PR format..."
+          
+          # PR タイトルの検証
+          TITLE="${{ github.event.pull_request.title }}"
+          if ! echo "$TITLE" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|ci|revert):'; then
+            echo "❌ Invalid PR title: $TITLE"
+            echo "PR title should start with: feat:, fix:, docs:, style:, refactor:, test:, chore:, ci:, or revert:"
+            exit 1
+          fi
+          echo "✅ PR format is valid"
+
+  # ステップ3: Rustコードチェック（条件付き実行）
+  rust-checks:
+    name: Rust Checks
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_tests != 'true'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+
+  # ステップ3.5: テスト実行（必須チェック用）
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_tests != 'true'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test
+
+  # ステップ4: セキュリティ監査（条件付き実行）
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_tests != 'true'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        run: cargo audit
+
+  # ステップ5: ドキュメントビルド（条件付き実行）
+  docs-check:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.pr_type == 'code' || needs.analyze-pr.outputs.pr_type == 'docs'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build documentation
+        run: cargo doc --no-deps
+
+  # ステップ6: カバレッジレポート（条件付き実行）
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_coverage != 'true'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Generate coverage report
+        run: cargo tarpaulin --out xml
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/cobertura.xml
+          flags: backend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ステップ6.5: Codecovダミーステータス（スキップ時用）
+  codecov-skip:
+    name: Codecov Skip Status
+    runs-on: ubuntu-latest
+    needs: [analyze-pr]
+    if: needs.analyze-pr.outputs.skip_coverage == 'true'
+    permissions:
+      statuses: write
+      checks: write
+    steps:
+      - name: Skip Codecov
+        run: |
+          echo "⏭️ Codecov checks skipped for this PR type"
+          echo "This is a placeholder job for when coverage is not needed"
+      
+      - name: Set codecov status
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # codecov/projectとcodecov/patchのステータスを手動で設定
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state='success' \
+            -f description='Skipped for CI changes' \
+            -f context='codecov/project' || echo "Failed to set codecov/project status"
+          
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state='success' \
+            -f description='Skipped for CI changes' \
+            -f context='codecov/patch' || echo "Failed to set codecov/patch status"
+
+  # ステップ7: 最終ステータスチェック
+  final-status:
+    name: Final Status Check
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, security-audit, docs-check, coverage, codecov-skip]
+    steps:
+      - name: Check PR Type
+        run: |
+          echo "📊 PR Analysis Results:"
+          echo "  - PR Type: ${{ needs.analyze-pr.outputs.pr_type }}"
+          echo "  - Skip Tests: ${{ needs.analyze-pr.outputs.skip_tests }}"
+          echo "  - Skip Build: ${{ needs.analyze-pr.outputs.skip_build }}"
+          echo "  - Skip Coverage: ${{ needs.analyze-pr.outputs.skip_coverage }}"
+
+      - name: Determine Success
+        run: |
+          # 各ジョブの結果を確認
+          if [[ "${{ needs.common-checks.result }}" != "success" ]]; then
+            echo "❌ Common checks failed"
+            exit 1
+          fi
+          
+          # スキップされたジョブは成功として扱う
+          if [[ "${{ needs.analyze-pr.outputs.skip_tests }}" != "true" ]]; then
+            if [[ "${{ needs.rust-checks.result }}" != "success" ]]; then
+              echo "❌ Rust checks failed"
+              exit 1
+            fi
+            if [[ "${{ needs.security-audit.result }}" != "success" ]]; then
+              echo "❌ Security audit failed"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ All required checks passed!"
