@@ -1,7 +1,7 @@
-use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
+use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{response::Html, routing::get, serve, Router};
-use nba_trade_scraper::graphql::{create_schema, Query};
+use nba_trade_scraper::graphql::{create_schema, Query, Mutation};
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -9,7 +9,7 @@ use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 async fn graphql_handler(
-    schema: axum::extract::Extension<Schema<Query, EmptyMutation, EmptySubscription>>,
+    schema: axum::extract::Extension<Schema<Query, Mutation, EmptySubscription>>,
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
