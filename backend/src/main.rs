@@ -19,6 +19,10 @@ async fn graphiql() -> Html<String> {
     Html(GraphiQLSource::build().endpoint("/").finish())
 }
 
+async fn health_check() -> &'static str {
+    "OK"
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ログの初期化
@@ -48,6 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/", get(graphiql).post(graphql_handler))
+        .route("/health", get(health_check))
         .layer(cors)
         .layer(axum::extract::Extension(schema));
 
