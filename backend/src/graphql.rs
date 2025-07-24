@@ -194,7 +194,7 @@ impl Mutation {
             errors: save_result
                 .errors
                 .into_iter()
-                .map(|(id, msg)| format!("{}: {}", id, msg))
+                .map(|(id, msg)| format!("{id}: {msg}"))
                 .collect(),
         })
     }
