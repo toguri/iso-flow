@@ -168,30 +168,32 @@ impl Mutation {
     async fn scrape_rss(&self, ctx: &Context<'_>) -> async_graphql::Result<ScrapeResult> {
         let pool = ctx.data::<SqlitePool>()?;
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         info!("Starting RSS scraping via GraphQL mutation...");
-        
+
         // RSSフィードをパース
         let parser = RssParser::new();
         let news_items = parser.fetch_all_feeds().await?;
-        
+
         info!("Fetched {} items from RSS feeds", news_items.len());
-        
+
         // データベースに保存
         let save_result = persistence.save_news_items(news_items).await?;
-        
+
         info!(
             "Scraping completed: {} saved, {} skipped, {} errors",
             save_result.saved_count,
             save_result.skipped_count,
             save_result.errors.len()
         );
-        
+
         Ok(ScrapeResult {
             saved_count: save_result.saved_count as i32,
             skipped_count: save_result.skipped_count as i32,
             error_count: save_result.errors.len() as i32,
-            errors: save_result.errors.into_iter()
+            errors: save_result
+                .errors
+                .into_iter()
                 .map(|(id, msg)| format!("{}: {}", id, msg))
                 .collect(),
         })
