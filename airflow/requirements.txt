@@ -1,0 +1,6 @@
+# Airflow DAGs dependencies
+requests>=2.31.0
+psycopg2-binary>=2.9.9
+apache-airflow-providers-postgres>=5.10.0
+apache-airflow-providers-http>=4.8.0
+apache-airflow-providers-amazon>=8.15.0

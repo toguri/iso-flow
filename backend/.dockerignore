@@ -1,0 +1,13 @@
+target/
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+*.md
+.env
+.env.*
+tests/
+benches/
+examples/
+*.log
+.DS_Store

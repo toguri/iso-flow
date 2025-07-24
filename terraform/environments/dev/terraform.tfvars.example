@@ -1,0 +1,36 @@
+# Development environment configuration
+# Copy this file to terraform.tfvars and update with your values
+
+# AWS Region
+aws_region = "ap-northeast-1"  # Tokyo
+
+# Project information
+project_name = "nba-trade-tracker"
+environment  = "dev"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+azs      = ["ap-northeast-1a", "ap-northeast-1c"]
+
+# RDS Configuration
+db_instance_class = "db.serverless"
+db_name          = "nba_trades"
+db_username      = "admin"
+# db_password should be set via environment variable: TF_VAR_db_password
+
+# ECS Configuration
+ecs_task_cpu    = 256   # 0.25 vCPU
+ecs_task_memory = 512   # 0.5 GB
+
+# MWAA Configuration
+mwaa_environment_class = "mw1.small"
+mwaa_min_workers      = 1
+mwaa_max_workers      = 2
+
+# Tags
+tags = {
+  Project     = "NBA Trade Tracker"
+  Environment = "dev"
+  ManagedBy   = "Terraform"
+  Owner       = "your-email@example.com"
+}
