@@ -1,23 +1,9 @@
-use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::{response::Html, routing::get, serve, Router};
-use nba_trade_scraper::graphql::{create_schema, Mutation, Query};
+use axum::serve;
+use nba_trade_scraper::create_app;
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
-use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
-
-async fn graphql_handler(
-    schema: axum::extract::Extension<Schema<Query, Mutation, EmptySubscription>>,
-    req: GraphQLRequest,
-) -> GraphQLResponse {
-    schema.execute(req.into_inner()).await.into()
-}
-
-async fn graphiql() -> Html<String> {
-    Html(GraphiQLSource::build().endpoint("/").finish())
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -39,17 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Database initialized");
 
-    let schema = create_schema(pool);
-
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
-
-    let app = Router::new()
-        .route("/", get(graphiql).post(graphql_handler))
-        .layer(cors)
-        .layer(axum::extract::Extension(schema));
+    let app = create_app(pool);
 
     info!("GraphQL playground available at http://localhost:8000");
 
