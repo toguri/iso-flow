@@ -1,0 +1,46 @@
+# AWS Configuration
+aws_region = "ap-northeast-1"
+
+# Project Configuration
+project_name = "iso-flow"
+environment  = "dev"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# Database Configuration
+database_name     = "isoflow"
+database_username = "isoflow_admin"
+database_password = "CHANGE_ME_TO_SECURE_PASSWORD"  # Use AWS Secrets Manager in production
+
+# Aurora Serverless v2 Configuration (Cost-optimized for dev)
+aurora_instance_count = 1
+aurora_min_capacity   = 0.5  # Minimum ACU for cost optimization
+aurora_max_capacity   = 1    # Maximum ACU for dev environment
+
+# ECS Configuration (Cost-optimized for dev)
+ecs_task_cpu      = "256"   # 0.25 vCPU
+ecs_task_memory   = "512"   # 512 MB
+ecs_desired_count = 1       # Single instance for dev
+
+# Container Configuration
+ecr_repository_url  = "YOUR_AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/iso-flow"
+container_image_tag = "latest"
+container_port      = 8080
+
+# MWAA Configuration (Cost-optimized for dev)
+mwaa_environment_class = "mw1.small"
+mwaa_max_workers      = 2
+mwaa_min_workers      = 1
+airflow_version       = "2.7.2"
+
+# Optional: Domain Configuration
+# domain_name         = "dev.example.com"
+# acm_certificate_arn = "arn:aws:acm:ap-northeast-1:YOUR_ACCOUNT_ID:certificate/xxxxx"
+
+# Tags
+additional_tags = {
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+  Terraform   = "true"
+}
