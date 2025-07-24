@@ -1,15 +1,15 @@
-use async_graphql::{http::GraphiQLSource, EmptyMutation, EmptySubscription, Schema};
+use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{response::Html, routing::get, serve, Router};
-use nba_trade_scraper::graphql::{create_schema, Query};
+use nba_trade_scraper::graphql::{create_schema, Query, Mutation};
 use sqlx::SqlitePool;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{info, Level};
+use tracing::{error, info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 async fn graphql_handler(
-    schema: axum::extract::Extension<Schema<Query, EmptyMutation, EmptySubscription>>,
+    schema: axum::extract::Extension<Schema<Query, Mutation, EmptySubscription>>,
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
@@ -39,6 +39,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Database initialized");
 
+    // スケジューラーを起動（5分間隔）
+    let scheduler_pool = pool.clone();
+    let scheduler_handle = tokio::spawn(async move {
+        match nba_trade_scraper::scheduler::create_scheduler(scheduler_pool).await {
+            Ok(scheduler) => {
+                info!("Scheduler created successfully");
+                if let Err(e) = scheduler.start().await {
+                    error!("Failed to start scheduler: {}", e);
+                }
+            }
+            Err(e) => {
+                error!("Failed to create scheduler: {}", e);
+            }
+        }
+    });
+
+    info!("Scheduler starting with 5 minute interval");
+
     let schema = create_schema(pool);
 
     let cors = CorsLayer::new()
@@ -54,7 +72,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("GraphQL playground available at http://localhost:8000");
 
     let listener = TcpListener::bind("0.0.0.0:8000").await?;
-    serve(listener, app).await?;
+    
+    // サーバーとスケジューラーを並行実行
+    tokio::select! {
+        result = serve(listener, app) => {
+            if let Err(e) = result {
+                error!("Server error: {}", e);
+            }
+        }
+        _ = scheduler_handle => {
+            error!("Scheduler unexpectedly stopped");
+        }
+    }
 
     Ok(())
 }
