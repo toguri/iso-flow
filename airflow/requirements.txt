@@ -1,0 +1,2 @@
+# Airflow dependencies for NBA Trade Tracker
+requests==2.31.0

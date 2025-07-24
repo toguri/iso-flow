@@ -1,0 +1,10 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and fill in the values
+
+# Database password (required)
+db_password = "your-secure-password-here"
+
+# Optional: Override default values
+# aws_region = "ap-northeast-1"
+# project_name = "nba-trade-tracker"
+# environment = "dev"
