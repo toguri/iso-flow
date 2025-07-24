@@ -92,7 +92,9 @@ async fn test_cors_headers() {
 
     // CORSヘッダーが正しく設定されているか確認
     assert_eq!(response.status(), StatusCode::OK);
-    assert!(response.headers().contains_key("access-control-allow-origin"));
+    assert!(response
+        .headers()
+        .contains_key("access-control-allow-origin"));
 }
 
 #[tokio::test]
