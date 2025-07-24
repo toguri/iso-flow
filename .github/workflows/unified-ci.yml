@@ -107,7 +107,7 @@ jobs:
           echo "✅ PR format is valid"
 
       - name: Auto Label PR
-        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        if: github.event_name == 'pull_request'
         uses: actions/labeler@v5
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
