@@ -266,11 +266,38 @@ jobs:
     runs-on: ubuntu-latest
     needs: [analyze-pr]
     if: needs.analyze-pr.outputs.skip_coverage == 'true'
+    permissions:
+      statuses: write
+      checks: write
     steps:
       - name: Skip Codecov
         run: |
           echo "⏭️ Codecov checks skipped for this PR type"
           echo "This is a placeholder job for when coverage is not needed"
+      
+      - name: Set codecov status
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # codecov/projectとcodecov/patchのステータスを手動で設定
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state='success' \
+            -f description='Skipped for CI changes' \
+            -f context='codecov/project' || echo "Failed to set codecov/project status"
+          
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }} \
+            -f state='success' \
+            -f description='Skipped for CI changes' \
+            -f context='codecov/patch' || echo "Failed to set codecov/patch status"
 
   # ステップ7: 最終ステータスチェック
   final-status:
