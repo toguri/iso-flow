@@ -215,7 +215,7 @@ jobs:
 
   # ステップ5: ドキュメントビルド（条件付き実行）
   docs-check:
-    name: Documentation Check
+    name: Build Documentation
     runs-on: ubuntu-latest
     needs: [analyze-pr, common-checks]
     if: needs.analyze-pr.outputs.pr_type == 'code' || needs.analyze-pr.outputs.pr_type == 'docs'
