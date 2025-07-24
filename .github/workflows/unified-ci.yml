@@ -90,14 +90,28 @@ jobs:
           done
           echo "✅ All commit messages are valid"
 
-  # ステップ2.5: 共通チェック（すべてのPRで実行）
-  common-checks:
-    name: Common Checks
+  # ステップ2.5: Auto Label PR（必須チェック用）
+  auto-label-pr:
+    name: Auto Label PR
     runs-on: ubuntu-latest
-    needs: [analyze-pr, check-commit-messages]
+    needs: analyze-pr
     permissions:
       contents: read
       pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auto Label PR
+        if: github.event_name == 'pull_request'
+        uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  # ステップ2.6: 共通チェック（すべてのPRで実行）
+  common-checks:
+    name: Common Checks
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, check-commit-messages, auto-label-pr]
     steps:
       - uses: actions/checkout@v4
 
@@ -113,12 +127,6 @@ jobs:
             exit 1
           fi
           echo "✅ PR format is valid"
-
-      - name: Auto Label PR
-        if: github.event_name == 'pull_request'
-        uses: actions/labeler@v5
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
 
   # ステップ3: Rustコードチェック（条件付き実行）
   rust-checks:
@@ -256,7 +264,7 @@ jobs:
     name: Final Status Check
     runs-on: ubuntu-latest
     if: always()
-    needs: [analyze-pr, check-commit-messages, common-checks, rust-checks, test, security-audit, docs-check, coverage]
+    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, security-audit, docs-check, coverage]
     steps:
       - name: Check PR Type
         run: |
