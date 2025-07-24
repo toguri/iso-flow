@@ -49,3 +49,43 @@ pub mod scheduler;
 
 /// ユーティリティ関数
 pub mod utils;
+
+use async_graphql::{EmptySubscription, Schema};
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use axum::{routing::get, Router};
+use tower_http::cors::{Any, CorsLayer};
+
+/// アプリケーションの作成
+pub fn create_app(pool: sqlx::SqlitePool) -> Router {
+    let schema = graphql::create_schema(pool);
+
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    Router::new()
+        .route("/", get(graphiql).post(graphql_handler))
+        .route("/health", get(health_check))
+        .layer(cors)
+        .layer(axum::extract::Extension(schema))
+}
+
+async fn graphql_handler(
+    schema: axum::extract::Extension<Schema<graphql::Query, graphql::Mutation, EmptySubscription>>,
+    req: GraphQLRequest,
+) -> GraphQLResponse {
+    schema.execute(req.into_inner()).await.into()
+}
+
+async fn graphiql() -> axum::response::Html<String> {
+    axum::response::Html(
+        async_graphql::http::GraphiQLSource::build()
+            .endpoint("/")
+            .finish(),
+    )
+}
+
+async fn health_check() -> &'static str {
+    "OK"
+}
