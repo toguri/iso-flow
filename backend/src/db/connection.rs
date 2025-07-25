@@ -81,10 +81,24 @@ mod tests {
     }
 
     #[test]
+    fn test_mask_connection_string_sqlite_memory() {
+        let url = "sqlite::memory:";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "sqlite::memory:");
+    }
+
+    #[test]
     fn test_mask_connection_string_postgres() {
         let url = "postgresql://user:pass@localhost:5432/db";
         let masked = mask_connection_string(url);
         assert_eq!(masked, "postgresql://****@localhost:5432/db");
+    }
+
+    #[test]
+    fn test_mask_connection_string_postgres_with_params() {
+        let url = "postgresql://user:pass@localhost:5432/db?sslmode=require";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "postgresql://****@localhost:5432/db?sslmode=require");
     }
 
     #[test]
@@ -95,9 +109,31 @@ mod tests {
     }
 
     #[test]
+    fn test_mask_connection_string_postgres_scheme() {
+        let url = "postgres://user:pass@localhost:5432/db";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "postgres://****@localhost:5432/db");
+    }
+
+    #[test]
     fn test_mask_connection_string_unknown() {
         let url = "unknown://something";
         let masked = mask_connection_string(url);
         assert_eq!(masked, "unknown://something...masked");
     }
+
+    #[test]
+    fn test_mask_connection_string_short() {
+        let url = "mysql://db";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "mysql://db...masked");
+    }
+
+    #[test]
+    fn test_mask_connection_string_no_scheme() {
+        let url = "just_a_string";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "just_a_string...masked");
+    }
+
 }
