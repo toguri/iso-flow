@@ -22,3 +22,8 @@ output "results_bucket_name" {
   description = "S3 bucket for MWAA results"
   value       = aws_s3_bucket.mwaa_results.id
 }
+
+output "security_group_id" {
+  description = "MWAA security group ID"
+  value       = aws_security_group.mwaa.id
+}

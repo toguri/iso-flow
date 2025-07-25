@@ -29,6 +29,7 @@ container_image_tag = "latest"
 container_port      = 8080
 
 # MWAA Configuration (Cost-optimized for dev)
+enable_mwaa            = false  # Set to true to enable Apache Airflow
 mwaa_environment_class = "mw1.small"
 mwaa_max_workers      = 2
 mwaa_min_workers      = 1
