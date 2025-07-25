@@ -100,5 +100,4 @@ mod tests {
         let masked = mask_connection_string(url);
         assert_eq!(masked, "unknown://something...masked");
     }
-
 }
