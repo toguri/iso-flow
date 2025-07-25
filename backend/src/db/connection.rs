@@ -37,6 +37,7 @@ pub async fn create_pool() -> Result<AnyPool> {
 }
 
 /// データベース種別を取得
+#[allow(dead_code)]
 pub fn get_database_type(_pool: &AnyPool) -> &'static str {
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
