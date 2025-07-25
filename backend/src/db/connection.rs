@@ -1,6 +1,6 @@
 use anyhow::Result;
-use sqlx::{migrate::MigrateDatabase, Any, AnyPool};
-use tracing::{info, warn};
+use sqlx::{migrate::MigrateDatabase, AnyPool};
+use tracing::info;
 
 /// データベース接続プールを作成
 /// DATABASE_URLの形式に基づいて、SQLiteまたはPostgreSQLに接続
@@ -25,27 +25,28 @@ pub async fn create_pool() -> Result<AnyPool> {
     let pool = AnyPool::connect(&database_url).await?;
 
     // データベースの種類を確認
-    match pool.any_kind() {
-        sqlx::any::AnyKind::Sqlite => {
-            info!("Connected to SQLite database");
-        }
-        sqlx::any::AnyKind::Postgres => {
-            info!("Connected to PostgreSQL database");
-        }
-        _ => {
-            warn!("Connected to unsupported database type");
-        }
+    if database_url.starts_with("sqlite:") {
+        info!("Connected to SQLite database");
+    } else if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
+        info!("Connected to PostgreSQL database");
+    } else {
+        info!("Connected to database");
     }
 
     Ok(pool)
 }
 
 /// データベース種別を取得
-pub fn get_database_type(pool: &AnyPool) -> &'static str {
-    match pool.any_kind() {
-        sqlx::any::AnyKind::Sqlite => "sqlite",
-        sqlx::any::AnyKind::Postgres => "postgres",
-        _ => "unknown",
+pub fn get_database_type(_pool: &AnyPool) -> &'static str {
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
+
+    if database_url.starts_with("sqlite:") {
+        "sqlite"
+    } else if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
+        "postgres"
+    } else {
+        "unknown"
     }
 }
 
