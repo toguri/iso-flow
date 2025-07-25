@@ -1,10 +1,8 @@
 name: PR Automation
 
 on:
-  pull_request_target:
-    types: [opened, reopened]
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
@@ -16,7 +14,7 @@ jobs:
   auto-assign-author:
     name: Auto Assign Author
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request_target' && (github.event.action == 'opened' || github.event.action == 'reopened')
+    if: github.event.action == 'opened' || github.event.action == 'reopened'
     steps:
       - uses: toshimaru/auto-author-assign@v2.1.1
 
