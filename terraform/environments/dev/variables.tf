@@ -129,6 +129,12 @@ variable "acm_certificate_arn" {
 }
 
 # MWAA Variables
+variable "enable_mwaa" {
+  description = "Enable Amazon MWAA deployment"
+  type        = bool
+  default     = false
+}
+
 variable "mwaa_environment_class" {
   description = "Environment class for MWAA"
   type        = string
