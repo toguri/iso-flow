@@ -83,7 +83,7 @@ impl RssParser {
             .pub_date()
             .and_then(|date| DateTime::parse_from_rfc2822(date).ok())
             .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now);
+            .unwrap_or_else(|| Utc::now());
 
         // GUIDからIDを生成、なければリンクのハッシュを使用
         let guid = item.guid().map(|g| g.value());

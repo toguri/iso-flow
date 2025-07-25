@@ -69,7 +69,7 @@ impl Query {
                 // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
                 let unix_timestamp = item.published_at.unix_timestamp();
                 let published_at =
-                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(|| Utc::now());
 
                 let news_item = NewsItem {
                     id: item.external_id,
@@ -103,7 +103,7 @@ impl Query {
                 // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
                 let unix_timestamp = item.published_at.unix_timestamp();
                 let published_at =
-                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(|| Utc::now());
 
                 let news_item = NewsItem {
                     id: item.external_id,
@@ -140,7 +140,7 @@ impl Query {
                 // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
                 let unix_timestamp = item.published_at.unix_timestamp();
                 let published_at =
-                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(|| Utc::now());
 
                 let news_item = NewsItem {
                     id: item.external_id,
