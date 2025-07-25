@@ -1,4 +1,17 @@
-Cargo.lock
-nba_trades.db
-nba_trades.db*
-Cargo.lock
+# テスト用データベース
+test_*.db
+*_test.db
+*.db.test
+nba_trades_test.db
+
+# SQLiteデータベース（本番用も含む）
+*.db
+*.sqlite
+*.sqlite3
+
+# SQLxオフラインモード
+.sqlx/
+
+# テスト用一時ファイル
+/tmp/
+/temp/
