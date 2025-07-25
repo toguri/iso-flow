@@ -57,7 +57,7 @@ fn mask_connection_string(url: &str) -> String {
         if let Some(scheme_end) = url.find("://") {
             let scheme = &url[..scheme_end + 3];
             let host_part = &url[at_pos..];
-            return format!("{}****{}", scheme, host_part);
+            return format!("{scheme}****{host_part}");
         }
     }
 
@@ -67,5 +67,6 @@ fn mask_connection_string(url: &str) -> String {
     }
 
     // その他の場合は一部をマスク
-    format!("{}...masked", &url[..url.len().min(20)])
+    let masked_part = &url[..url.len().min(20)];
+    format!("{masked_part}...masked")
 }
