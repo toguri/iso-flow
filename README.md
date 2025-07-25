@@ -42,6 +42,7 @@ iso-flow/
 ## 📖 ドキュメント
 
 - [開発計画](docs/DEVELOPMENT_PLAN.md)
+- [ローカル開発環境セットアップ](docs/LOCAL_DEVELOPMENT.md)
 
 ## 🏃 Getting Started
 
