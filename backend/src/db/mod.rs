@@ -7,6 +7,7 @@ use anyhow::Result;
 use sqlx::{sqlite::SqlitePool, Pool, Sqlite};
 use std::env;
 
+pub mod connection;
 pub mod models;
 pub mod simple_repository;
 

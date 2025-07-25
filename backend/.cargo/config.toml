@@ -1,0 +1,10 @@
+[env]
+# テストカバレッジの除外設定
+LLVM_PROFILE_FILE="coverage-%p-%m.profraw"
+
+[build]
+# ビルド時の設定
+
+[target.'cfg(all())']
+# カバレッジ測定時のフラグ
+rustflags = ["-C", "instrument-coverage"]

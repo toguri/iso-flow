@@ -33,3 +33,6 @@ logs/
 *.tmp
 *.temp
 .cache/
+test_*.db
+*_test.db
+*.db.test
