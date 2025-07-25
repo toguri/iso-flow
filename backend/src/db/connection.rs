@@ -14,11 +14,9 @@ pub async fn create_pool() -> Result<AnyPool> {
     );
 
     // データベースが存在しない場合は作成（SQLiteの場合）
-    if database_url.starts_with("sqlite:") {
-        if !sqlx::Sqlite::database_exists(&database_url).await? {
-            info!("Creating SQLite database...");
-            sqlx::Sqlite::create_database(&database_url).await?;
-        }
+    if database_url.starts_with("sqlite:") && !sqlx::Sqlite::database_exists(&database_url).await? {
+        info!("Creating SQLite database...");
+        sqlx::Sqlite::create_database(&database_url).await?;
     }
 
     // 接続プールを作成
