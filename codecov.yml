@@ -47,3 +47,5 @@ ignore:
   - "frontend/**/*"
   - "terraform/**/*"
   - "airflow/**/*"
+  # データベース接続関連（統合テストで確認）
+  - "backend/src/db/connection.rs"

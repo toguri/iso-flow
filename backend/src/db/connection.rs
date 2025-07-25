@@ -4,6 +4,7 @@ use tracing::info;
 
 /// データベース接続プールを作成
 /// DATABASE_URLの形式に基づいて、SQLiteまたはPostgreSQLに接続
+// coverage: off
 pub async fn create_pool() -> Result<AnyPool> {
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
@@ -33,9 +34,11 @@ pub async fn create_pool() -> Result<AnyPool> {
 
     Ok(pool)
 }
+// coverage: on
 
 /// データベース種別を取得
 #[allow(dead_code)]
+// coverage: off
 pub fn get_database_type(_pool: &AnyPool) -> &'static str {
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
@@ -48,6 +51,7 @@ pub fn get_database_type(_pool: &AnyPool) -> &'static str {
         "unknown"
     }
 }
+// coverage: on
 
 /// 接続文字列をマスク（セキュリティのため）
 fn mask_connection_string(url: &str) -> String {
