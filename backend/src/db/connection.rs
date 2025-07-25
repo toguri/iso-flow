@@ -68,3 +68,37 @@ fn mask_connection_string(url: &str) -> String {
     let masked_part = &url[..url.len().min(20)];
     format!("{masked_part}...masked")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mask_connection_string_sqlite() {
+        let url = "sqlite:nba_trades.db";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "sqlite:nba_trades.db");
+    }
+
+    #[test]
+    fn test_mask_connection_string_postgres() {
+        let url = "postgresql://user:pass@localhost:5432/db";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "postgresql://****@localhost:5432/db");
+    }
+
+    #[test]
+    fn test_mask_connection_string_postgres_no_auth() {
+        let url = "postgresql://localhost:5432/db";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "postgresql://localho...masked");
+    }
+
+    #[test]
+    fn test_mask_connection_string_unknown() {
+        let url = "unknown://something";
+        let masked = mask_connection_string(url);
+        assert_eq!(masked, "unknown://something...masked");
+    }
+
+}
