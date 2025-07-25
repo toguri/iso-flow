@@ -92,107 +92,7 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
-resource "aws_security_group" "rds" {
-  name_prefix = "${var.project_name}-${var.environment}-rds-"
-  description = "Security group for RDS Aurora"
-  vpc_id      = module.vpc.vpc_id
-  
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_tasks.id]
-  }
-  
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# RDS Aurora Serverless v2
-resource "aws_db_subnet_group" "main" {
-  name       = "${var.project_name}-${var.environment}"
-  subnet_ids = module.vpc.database_subnet_ids
-  
-  tags = {
-    Name = "${var.project_name}-${var.environment}-db-subnet-group"
-  }
-}
-
-resource "aws_rds_cluster" "aurora" {
-  cluster_identifier      = "${var.project_name}-${var.environment}"
-  engine                  = "aurora-postgresql"
-  engine_mode             = "provisioned"
-  engine_version          = var.aurora_engine_version
-  database_name           = var.database_name
-  master_username         = var.database_username
-  master_password         = var.database_password
-  
-  serverlessv2_scaling_configuration {
-    max_capacity = var.aurora_max_capacity
-    min_capacity = var.aurora_min_capacity
-  }
-  
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  
-  backup_retention_period = var.backup_retention_days
-  preferred_backup_window = "03:00-04:00"
-  preferred_maintenance_window = "sun:04:00-sun:05:00"
-  
-  enabled_cloudwatch_logs_exports = ["postgresql"]
-  
-  skip_final_snapshot = var.environment == "dev" ? true : false
-  final_snapshot_identifier = var.environment == "dev" ? null : "${var.project_name}-${var.environment}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
-  
-  lifecycle {
-    ignore_changes = [master_password]
-  }
-}
-
-resource "aws_rds_cluster_instance" "aurora" {
-  count = var.aurora_instance_count
-  
-  identifier         = "${var.project_name}-${var.environment}-${count.index + 1}"
-  cluster_identifier = aws_rds_cluster.aurora.id
-  instance_class     = "db.serverless"
-  engine             = aws_rds_cluster.aurora.engine
-  engine_version     = aws_rds_cluster.aurora.engine_version
-  
-  performance_insights_enabled = true
-  monitoring_interval         = 60
-  monitoring_role_arn        = aws_iam_role.rds_monitoring.arn
-}
-
-# IAM Role for RDS Monitoring
-resource "aws_iam_role" "rds_monitoring" {
-  name_prefix = "${var.project_name}-${var.environment}-rds-monitoring-"
-  
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "monitoring.rds.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "rds_monitoring" {
-  role       = aws_iam_role.rds_monitoring.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
-}
+# Note: RDS configuration has been moved to rds.tf
 
 # ECS Cluster
 resource "aws_ecs_cluster" "main" {
@@ -415,9 +315,7 @@ output "alb_dns_name" {
   value = aws_lb.main.dns_name
 }
 
-output "rds_endpoint" {
-  value = aws_rds_cluster.aurora.endpoint
-}
+# Note: RDS outputs have been moved to rds.tf
 
 output "frontend_bucket" {
   value = aws_s3_bucket.frontend.id
