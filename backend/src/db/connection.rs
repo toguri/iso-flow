@@ -98,7 +98,10 @@ mod tests {
     fn test_mask_connection_string_postgres_with_params() {
         let url = "postgresql://user:pass@localhost:5432/db?sslmode=require";
         let masked = mask_connection_string(url);
-        assert_eq!(masked, "postgresql://****@localhost:5432/db?sslmode=require");
+        assert_eq!(
+            masked,
+            "postgresql://****@localhost:5432/db?sslmode=require"
+        );
     }
 
     #[test]
@@ -135,5 +138,4 @@ mod tests {
         let masked = mask_connection_string(url);
         assert_eq!(masked, "just_a_string...masked");
     }
-
 }
