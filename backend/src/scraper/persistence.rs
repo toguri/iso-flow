@@ -68,7 +68,7 @@ impl NewsPersistence {
                 external_id, title, description, source_name, source_url,
                 category, published_at, scraped_at, created_at, updated_at
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#,
         )
         .bind(&item.id)
@@ -90,7 +90,7 @@ impl NewsPersistence {
     /// 外部IDでニュースの存在確認
     async fn exists_by_external_id(&self, external_id: &str) -> Result<bool> {
         let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE external_id = ?1")
+            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE external_id = $1")
                 .bind(external_id)
                 .fetch_one(&self.pool)
                 .await?;
@@ -116,7 +116,7 @@ impl NewsPersistence {
                 created_at
             FROM trade_news
             ORDER BY published_at DESC
-            LIMIT ?1
+            LIMIT $1
             "#,
         )
         .bind(limit)
@@ -143,7 +143,7 @@ impl NewsPersistence {
                 scraped_at,
                 created_at
             FROM trade_news
-            WHERE category = ?1
+            WHERE category = $1
             ORDER BY published_at DESC
             "#,
         )

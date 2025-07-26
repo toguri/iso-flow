@@ -6,14 +6,17 @@ use nba_trade_scraper::create_app;
 use tower::ServiceExt;
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_graphql_playground_endpoint() {
-    // テスト用のメモリ内データベース
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    // PostgreSQLデータベースが必要
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
@@ -40,14 +43,17 @@ async fn test_graphql_playground_endpoint() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_graphql_post_endpoint() {
-    // テスト用のメモリ内データベース
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    // PostgreSQLデータベースが必要
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
@@ -76,14 +82,17 @@ async fn test_graphql_post_endpoint() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_cors_headers() {
-    // テスト用のメモリ内データベース
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    // PostgreSQLデータベースが必要
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
@@ -109,14 +118,17 @@ async fn test_cors_headers() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_create_app_routes() {
-    // テスト用のメモリ内データベース
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    // PostgreSQLデータベースが必要
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);

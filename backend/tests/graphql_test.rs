@@ -6,13 +6,16 @@ use nba_trade_scraper::graphql::{create_schema, graphql_routes};
 use tower::ServiceExt;
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_graphql_playground() {
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -32,13 +35,16 @@ async fn test_graphql_playground() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_trade_news_query() {
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -63,13 +69,16 @@ async fn test_trade_news_query() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_trade_news_by_category_query() {
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -94,13 +103,16 @@ async fn test_trade_news_by_category_query() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_trade_news_by_source_query() {
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -125,13 +137,16 @@ async fn test_trade_news_by_source_query() {
 }
 
 #[tokio::test]
-#[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+#[ignore = "Requires PostgreSQL database connection"]
 async fn test_invalid_query() {
-    std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool()
-        .await
-        .unwrap();
-    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    let pool = match nba_trade_scraper::db::connection::create_pool().await {
+        Ok(pool) => pool,
+        Err(_) => {
+            eprintln!("Skipping test: PostgreSQL database connection required");
+            return;
+        }
+    };
+    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);

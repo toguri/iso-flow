@@ -5,8 +5,15 @@ use tracing::info;
 /// PostgreSQL接続プールを作成
 // coverage: off
 pub async fn create_pool() -> Result<PgPool> {
-    let database_url =
-        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for PostgreSQL connection");
+    let database_url = match std::env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            // CI環境などでDATABASE_URLが設定されていない場合
+            return Err(anyhow::anyhow!(
+                "DATABASE_URL environment variable not set. PostgreSQL connection required."
+            ));
+        }
+    };
 
     // PostgreSQL URLのみ許可
     if !database_url.starts_with("postgres://") && !database_url.starts_with("postgresql://") {
