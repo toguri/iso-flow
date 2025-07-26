@@ -101,6 +101,8 @@ make test-unit
 make test-integration
 ```
 
+現在のテストカバレッジ: ![Coverage](https://img.shields.io/codecov/c/github/toguri/iso-flow)
+
 ### 統合テスト
 以下の統合テストが実装されています：
 - **GraphQL API**: エンドポイントの動作確認
