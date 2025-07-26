@@ -1,5 +1,3 @@
-mod common;
-
 use axum::{
     body::Body,
     http::{Request, StatusCode},

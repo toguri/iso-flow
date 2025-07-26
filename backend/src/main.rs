@@ -17,17 +17,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // データベース接続の初期化
     let pool = create_pool().await?;
 
-    // DATABASE_URLから適切なマイグレーションを実行
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
-
-    if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
-        info!("Running PostgreSQL migrations...");
-        sqlx::migrate!("./migrations_postgres").run(&pool).await?;
-    } else {
-        info!("Running SQLite migrations...");
-        sqlx::migrate!("./migrations").run(&pool).await?;
-    }
+    // PostgreSQLマイグレーションを実行
+    info!("Running PostgreSQL migrations...");
+    sqlx::migrate!("./migrations_postgres").run(&pool).await?;
 
     info!("Database initialized");
 

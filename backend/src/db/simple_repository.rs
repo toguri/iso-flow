@@ -1,13 +1,13 @@
 /// シンプルなリポジトリ実装（SQLxマクロを使わない）
 use anyhow::Result;
-use sqlx::SqlitePool;
+use sqlx::postgres::PgPool;
 
 pub struct SimpleRepository {
-    pool: SqlitePool,
+    pool: PgPool,
 }
 
 impl SimpleRepository {
-    pub fn new(pool: SqlitePool) -> Self {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -22,7 +22,7 @@ impl SimpleRepository {
     /// テーブルが存在することを確認
     pub async fn check_tables(&self) -> Result<bool> {
         let result = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('teams', 'trade_news')"
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('teams', 'trade_news')"
         )
         .fetch_one(&self.pool)
         .await?;
@@ -35,12 +35,17 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "Requires PostgreSQL database connection"]
     async fn test_simple_repository() {
-        // メモリデータベースで初期化
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        // PostgreSQLデータベースで初期化
+        // テスト環境ではPostgreSQLのセットアップが必要
+        let pool = crate::db::connection::create_pool().await.unwrap();
 
         // マイグレーションを実行
-        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+        sqlx::migrate!("./migrations_postgres")
+            .run(&pool)
+            .await
+            .unwrap();
 
         let repo = SimpleRepository::new(pool.clone());
 

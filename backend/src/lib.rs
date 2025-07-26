@@ -53,10 +53,11 @@ pub mod utils;
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{routing::get, Router};
+use sqlx::postgres::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 
 /// アプリケーションの作成
-pub fn create_app(pool: sqlx::AnyPool) -> Router {
+pub fn create_app(pool: PgPool) -> Router {
     let schema = graphql::create_schema(pool);
 
     let cors = CorsLayer::new()

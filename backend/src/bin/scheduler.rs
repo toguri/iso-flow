@@ -4,7 +4,6 @@ use nba_trade_scraper::{
     db::connection::create_pool,
     scheduler::{create_scheduler, run_scraping_job},
 };
-use std::path::PathBuf;
 use tokio::signal;
 use tracing::{error, info, Level};
 use tracing_subscriber::FmtSubscriber;
@@ -13,10 +12,6 @@ use tracing_subscriber::FmtSubscriber;
 #[command(name = "scheduler")]
 #[command(about = "NBAニュースの定期スクレイピングスケジューラー")]
 struct Cli {
-    /// データベースファイルのパス
-    #[arg(short, long, default_value = "nba_trades.db")]
-    database: PathBuf,
-
     /// 起動時に即座にスクレイピングを実行
     #[arg(short, long)]
     immediate: bool,
@@ -34,15 +29,10 @@ async fn main() -> Result<()> {
 
     info!("Starting NBA Trade Scraper Scheduler...");
 
-    // データベース接続
-    let database_url = format!("sqlite:{}", cli.database.display());
-    std::env::set_var("DATABASE_URL", &database_url);
-    info!("Connecting to database: {}", database_url);
+    // データベース接続（PostgreSQL）
     let pool = create_pool().await?;
 
-    // マイグレーションはconnectionモジュール内で実行される
-
-    info!("Database initialized");
+    info!("Database connected");
 
     // 起動時に即座に実行するオプション
     if cli.immediate {

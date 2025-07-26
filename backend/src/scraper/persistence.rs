@@ -1,17 +1,17 @@
 use anyhow::Result;
 use chrono::Utc;
-use sqlx::AnyPool;
+use sqlx::postgres::PgPool;
 use tracing::{error, info};
 
 use crate::scraper::models::NewsItem;
 
 /// スクレイピングしたデータをデータベースに保存する
 pub struct NewsPersistence {
-    pool: AnyPool,
+    pool: PgPool,
 }
 
 impl NewsPersistence {
-    pub fn new(pool: AnyPool) -> Self {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -184,7 +184,7 @@ mod tests {
     use super::*;
     use crate::scraper::models::NewsSource;
 
-    async fn setup_test_db() -> AnyPool {
+    async fn setup_test_db() -> PgPool {
         // 一時的にダミーの実装
         // TODO: モック化または統合テスト環境の構築が必要
         panic!("Test DB setup not implemented - tests are temporarily disabled");

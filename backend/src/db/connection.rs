@@ -1,55 +1,43 @@
 use anyhow::Result;
-use sqlx::{migrate::MigrateDatabase, AnyPool};
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use tracing::info;
 
-/// データベース接続プールを作成
-/// DATABASE_URLの形式に基づいて、SQLiteまたはPostgreSQLに接続
+/// PostgreSQL接続プールを作成
 // coverage: off
-pub async fn create_pool() -> Result<AnyPool> {
+pub async fn create_pool() -> Result<PgPool> {
     let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
+        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for PostgreSQL connection");
+
+    // PostgreSQL URLのみ許可
+    if !database_url.starts_with("postgres://") && !database_url.starts_with("postgresql://") {
+        return Err(anyhow::anyhow!(
+            "Only PostgreSQL URLs are supported. Got: {}",
+            mask_connection_string(&database_url)
+        ));
+    }
 
     info!(
-        "Connecting to database: {}",
+        "Connecting to PostgreSQL: {}",
         mask_connection_string(&database_url)
     );
 
-    // データベースが存在しない場合は作成（SQLiteの場合）
-    if database_url.starts_with("sqlite:") && !sqlx::Sqlite::database_exists(&database_url).await? {
-        info!("Creating SQLite database...");
-        sqlx::Sqlite::create_database(&database_url).await?;
-    }
-
     // 接続プールを作成
-    let pool = AnyPool::connect(&database_url).await?;
+    let pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&database_url)
+        .await?;
 
-    // データベースの種類を確認
-    if database_url.starts_with("sqlite:") {
-        info!("Connected to SQLite database");
-    } else if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
-        info!("Connected to PostgreSQL database");
-    } else {
-        info!("Connected to database");
-    }
+    info!("Connected to PostgreSQL database");
 
     Ok(pool)
 }
 // coverage: on
 
-/// データベース種別を取得
+/// データベース種別を取得（PostgreSQL固定）
 #[allow(dead_code)]
 // coverage: off
-pub fn get_database_type(_pool: &AnyPool) -> &'static str {
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
-
-    if database_url.starts_with("sqlite:") {
-        "sqlite"
-    } else if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
-        "postgres"
-    } else {
-        "unknown"
-    }
+pub fn get_database_type(_pool: &PgPool) -> &'static str {
+    "postgres"
 }
 // coverage: on
 
@@ -63,11 +51,6 @@ fn mask_connection_string(url: &str) -> String {
         }
     }
 
-    // SQLiteの場合はそのまま返す
-    if url.starts_with("sqlite:") {
-        return url.to_string();
-    }
-
     // その他の場合は一部をマスク
     let masked_part = &url[..url.len().min(20)];
     format!("{masked_part}...masked")
@@ -76,20 +59,6 @@ fn mask_connection_string(url: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_mask_connection_string_sqlite() {
-        let url = "sqlite:nba_trades.db";
-        let masked = mask_connection_string(url);
-        assert_eq!(masked, "sqlite:nba_trades.db");
-    }
-
-    #[test]
-    fn test_mask_connection_string_sqlite_memory() {
-        let url = "sqlite::memory:";
-        let masked = mask_connection_string(url);
-        assert_eq!(masked, "sqlite::memory:");
-    }
 
     #[test]
     fn test_mask_connection_string_postgres() {
