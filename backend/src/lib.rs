@@ -25,10 +25,10 @@
 //! async fn main() {
 //!     // データベース接続
 //!     let pool = create_pool().await.unwrap();
-//!     
+//!
 //!     // GraphQLスキーマの作成
 //!     let schema = create_schema(pool);
-//!     
+//!
 //!     // RSSフィードの解析
 //!     let parser = RssParser::new();
 //!     let news = parser.fetch_all_feeds().await.unwrap();

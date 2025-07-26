@@ -16,7 +16,10 @@ async fn test_health_check_endpoint() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres").run(&pool).await.unwrap();
+    sqlx::migrate!("./migrations_postgres")
+        .run(&pool)
+        .await
+        .unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
