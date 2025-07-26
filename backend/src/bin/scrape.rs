@@ -1,5 +1,7 @@
-use nba_trade_scraper::scraper::{NewsPersistence, RssParser};
-use sqlx::SqlitePool;
+use nba_trade_scraper::{
+    db::connection::create_pool,
+    scraper::{NewsPersistence, RssParser},
+};
 use tracing::{error, info, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -14,12 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting news scraping...");
 
     // データベース接続
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
-    let pool = SqlitePool::connect(&database_url).await?;
-
-    // マイグレーション実行
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    let pool = create_pool().await?;
 
     // RSSフィードからニュースを取得
     let parser = RssParser::new();

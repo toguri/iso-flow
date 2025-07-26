@@ -5,12 +5,11 @@ use axum::{
     http::{Request, StatusCode},
 };
 use nba_trade_scraper::graphql::{create_schema, graphql_routes};
-use sqlx::SqlitePool;
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn test_graphql_playground() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -32,7 +31,7 @@ async fn test_graphql_playground() {
 
 #[tokio::test]
 async fn test_trade_news_query() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -59,7 +58,7 @@ async fn test_trade_news_query() {
 
 #[tokio::test]
 async fn test_trade_news_by_category_query() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -86,7 +85,7 @@ async fn test_trade_news_by_category_query() {
 
 #[tokio::test]
 async fn test_trade_news_by_source_query() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -113,7 +112,7 @@ async fn test_trade_news_by_source_query() {
 
 #[tokio::test]
 async fn test_invalid_query() {
-    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);

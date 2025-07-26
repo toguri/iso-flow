@@ -15,3 +15,7 @@ nba_trades_test.db
 # テスト用一時ファイル
 /tmp/
 /temp/
+
+# カバレッジファイル
+coverage-*.profraw
+cobertura.xml

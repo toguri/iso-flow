@@ -3,8 +3,10 @@
 //! 使用方法: cargo run --bin init_scrape
 
 use anyhow::Result;
-use nba_trade_scraper::scraper::{NewsPersistence, RssParser};
-use sqlx::SqlitePool;
+use nba_trade_scraper::{
+    db::connection::create_pool,
+    scraper::{NewsPersistence, RssParser},
+};
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -19,12 +21,7 @@ async fn main() -> Result<()> {
     info!("Starting initial RSS scraping...");
 
     // データベース接続
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
-    let pool = SqlitePool::connect(&database_url).await?;
-
-    // マイグレーション実行
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    let pool = create_pool().await?;
 
     // RSSフィードを取得
     let parser = RssParser::new();

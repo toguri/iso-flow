@@ -3,7 +3,7 @@
 //! 定期的なスクレイピングジョブの実行を管理します。
 
 use anyhow::Result;
-use sqlx::SqlitePool;
+use sqlx::AnyPool;
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::scraper::{NewsPersistence, RssParser};
 
 /// スクレイピングジョブを実行する
-pub async fn run_scraping_job(pool: SqlitePool) -> Result<()> {
+pub async fn run_scraping_job(pool: AnyPool) -> Result<()> {
     info!("Starting scraping job");
 
     // RSSフィードからニュースを取得
@@ -41,7 +41,7 @@ pub async fn run_scraping_job(pool: SqlitePool) -> Result<()> {
 }
 
 /// スケジューラーを作成し、設定する
-pub async fn create_scheduler(pool: SqlitePool) -> Result<JobScheduler> {
+pub async fn create_scheduler(pool: AnyPool) -> Result<JobScheduler> {
     let scheduler = JobScheduler::new().await?;
 
     // 5分ごとのスクレイピングジョブを作成
@@ -72,7 +72,7 @@ pub async fn create_scheduler(pool: SqlitePool) -> Result<JobScheduler> {
 }
 
 /// 即座にスクレイピングジョブを実行するスケジューラーを作成（テスト用）
-pub async fn create_immediate_scheduler(pool: SqlitePool) -> Result<JobScheduler> {
+pub async fn create_immediate_scheduler(pool: AnyPool) -> Result<JobScheduler> {
     let scheduler = JobScheduler::new().await?;
 
     // 30秒後に1回だけ実行するジョブ（デモ用）
@@ -106,7 +106,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_scheduler() {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
 
         // マイグレーションを実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
@@ -119,7 +119,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_immediate_scheduler() {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
 
         // マイグレーションを実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
@@ -132,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_scraping_job() {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
 
         // マイグレーションを実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();

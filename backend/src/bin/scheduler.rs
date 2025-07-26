@@ -1,7 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
-use nba_trade_scraper::scheduler::{create_scheduler, run_scraping_job};
-use sqlx::SqlitePool;
+use nba_trade_scraper::{
+    db::connection::create_pool,
+    scheduler::{create_scheduler, run_scraping_job},
+};
 use std::path::PathBuf;
 use tokio::signal;
 use tracing::{error, info, Level};
@@ -34,11 +36,11 @@ async fn main() -> Result<()> {
 
     // データベース接続
     let database_url = format!("sqlite:{}", cli.database.display());
+    std::env::set_var("DATABASE_URL", &database_url);
     info!("Connecting to database: {}", database_url);
-    let pool = SqlitePool::connect(&database_url).await?;
+    let pool = create_pool().await?;
 
-    // マイグレーション実行
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    // マイグレーションはconnectionモジュール内で実行される
 
     info!("Database initialized");
 

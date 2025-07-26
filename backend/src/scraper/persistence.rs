@@ -1,17 +1,17 @@
 use anyhow::Result;
 use chrono::Utc;
-use sqlx::SqlitePool;
+use sqlx::AnyPool;
 use tracing::{error, info};
 
 use crate::scraper::models::NewsItem;
 
 /// スクレイピングしたデータをデータベースに保存する
 pub struct NewsPersistence {
-    pool: SqlitePool,
+    pool: AnyPool,
 }
 
 impl NewsPersistence {
-    pub fn new(pool: SqlitePool) -> Self {
+    pub fn new(pool: AnyPool) -> Self {
         Self { pool }
     }
 
@@ -62,7 +62,7 @@ impl NewsPersistence {
         let now = Utc::now();
         let source_name = item.source.to_string();
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO trade_news (
                 external_id, title, description, source_name, source_url,
@@ -70,17 +70,17 @@ impl NewsPersistence {
             )
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
             "#,
-            item.id,
-            item.title,
-            item.description,
-            source_name,
-            item.link,
-            item.category,
-            item.published_at,
-            now,
-            now,
-            now
         )
+        .bind(&item.id)
+        .bind(&item.title)
+        .bind(&item.description)
+        .bind(&source_name)
+        .bind(&item.link)
+        .bind(&item.category)
+        .bind(item.published_at.to_rfc3339())
+        .bind(now.to_rfc3339())
+        .bind(now.to_rfc3339())
+        .bind(now.to_rfc3339())
         .execute(&self.pool)
         .await?;
 
@@ -89,20 +89,18 @@ impl NewsPersistence {
 
     /// 外部IDでニュースの存在確認
     async fn exists_by_external_id(&self, external_id: &str) -> Result<bool> {
-        let count: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) as count FROM trade_news WHERE external_id = ?1",
-            external_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE external_id = ?1")
+                .bind(external_id)
+                .fetch_one(&self.pool)
+                .await?;
 
         Ok(count > 0)
     }
 
     /// 最新のニュースを取得
     pub async fn get_recent_news(&self, limit: i32) -> Result<Vec<SavedNewsItem>> {
-        let items = sqlx::query_as!(
-            SavedNewsItem,
+        let items = sqlx::query_as::<_, SavedNewsItem>(
             r#"
             SELECT 
                 id,
@@ -120,8 +118,8 @@ impl NewsPersistence {
             ORDER BY published_at DESC
             LIMIT ?1
             "#,
-            limit
         )
+        .bind(limit)
         .fetch_all(&self.pool)
         .await?;
 
@@ -130,8 +128,7 @@ impl NewsPersistence {
 
     /// カテゴリー別にニュースを取得
     pub async fn get_news_by_category(&self, category: &str) -> Result<Vec<SavedNewsItem>> {
-        let items = sqlx::query_as!(
-            SavedNewsItem,
+        let items = sqlx::query_as::<_, SavedNewsItem>(
             r#"
             SELECT 
                 id,
@@ -149,8 +146,8 @@ impl NewsPersistence {
             WHERE category = ?1
             ORDER BY published_at DESC
             "#,
-            category
         )
+        .bind(category)
         .fetch_all(&self.pool)
         .await?;
 
@@ -177,9 +174,9 @@ pub struct SavedNewsItem {
     pub source_url: String,
     pub category: String,
     pub is_official: Option<bool>, // デフォルト値があるため、Option
-    pub published_at: sqlx::types::time::OffsetDateTime, // SQLiteのTIMESTAMPはOffsetDateTime
-    pub scraped_at: Option<sqlx::types::time::OffsetDateTime>,
-    pub created_at: Option<sqlx::types::time::OffsetDateTime>,
+    pub published_at: String,      // RFC3339形式の文字列として保存
+    pub scraped_at: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[cfg(test)]
@@ -187,8 +184,9 @@ mod tests {
     use super::*;
     use crate::scraper::models::NewsSource;
 
-    async fn setup_test_db() -> SqlitePool {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    async fn setup_test_db() -> AnyPool {
+        // Use AnyPool directly
+        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
 
         // マイグレーション実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
