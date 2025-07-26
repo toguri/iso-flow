@@ -19,12 +19,12 @@
 //! ```no_run
 //! use nba_trade_scraper::graphql::create_schema;
 //! use nba_trade_scraper::scraper::RssParser;
-//! use sqlx::SqlitePool;
+//! use nba_trade_scraper::db::connection::create_pool;
 //!
 //! #[tokio::main]
 //! async fn main() {
 //!     // データベース接続
-//!     let pool = SqlitePool::connect("sqlite:nba_trades.db").await.unwrap();
+//!     let pool = create_pool().await.unwrap();
 //!     
 //!     // GraphQLスキーマの作成
 //!     let schema = create_schema(pool);
