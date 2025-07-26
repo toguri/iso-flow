@@ -166,7 +166,7 @@ pub struct SaveResult {
 /// データベースに保存されたニュースアイテム
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SavedNewsItem {
-    pub id: Option<i64>, // SQLiteのINTEGER PRIMARY KEYはi64
+    pub id: Option<i64>, // PostgreSQLのSERIALはi64として扱われる
     pub external_id: String,
     pub title: String,
     pub description: Option<String>,
