@@ -8,7 +8,7 @@ use tower::ServiceExt;
 #[tokio::test]
 async fn test_graphql_playground_endpoint() {
     // テスト用のメモリ内データベース
-    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     // アプリケーションを作成
@@ -38,7 +38,7 @@ async fn test_graphql_playground_endpoint() {
 #[tokio::test]
 async fn test_graphql_post_endpoint() {
     // テスト用のメモリ内データベース
-    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     // アプリケーションを作成
@@ -70,7 +70,7 @@ async fn test_graphql_post_endpoint() {
 #[tokio::test]
 async fn test_cors_headers() {
     // テスト用のメモリ内データベース
-    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     // アプリケーションを作成
@@ -99,7 +99,7 @@ async fn test_cors_headers() {
 #[tokio::test]
 async fn test_create_app_routes() {
     // テスト用のメモリ内データベース
-    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     // アプリケーションを作成

@@ -106,7 +106,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_scheduler() {
-        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
 
         // マイグレーションを実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
@@ -119,7 +119,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_immediate_scheduler() {
-        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
 
         // マイグレーションを実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
@@ -132,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_scraping_job() {
-        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
 
         // マイグレーションを実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();

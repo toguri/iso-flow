@@ -186,7 +186,7 @@ mod tests {
 
     async fn setup_test_db() -> AnyPool {
         // Use AnyPool directly
-        let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
 
         // マイグレーション実行
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();

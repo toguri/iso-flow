@@ -8,7 +8,7 @@ use tower::ServiceExt;
 #[tokio::test]
 async fn test_health_check_endpoint() {
     // テスト用のメモリ内データベース
-    let pool = sqlx::AnyPool::connect("sqlite::memory:").await.unwrap();
+    let pool = sqlx::AnyPool::connect("sqlite://:memory:").await.unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     // アプリケーションを作成
