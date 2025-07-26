@@ -3,19 +3,48 @@ name: Code Quality Check
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - '**.rs'
-      - '**.toml'
-      - '**.ts'
-      - '**.tsx'
-      - '**.js'
-      - '**.jsx'
 
 jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - '**.rs'
+              - '**/Cargo.toml'
+              - '**/Cargo.lock'
+            terraform:
+              - '**.tf'
+              - '**.tfvars'
+              - 'terraform/**'
+            code:
+              - '**.rs'
+              - '**.toml'
+              - '**.ts'
+              - '**.tsx'
+              - '**.js'
+              - '**.jsx'
+              - '**.tf'
+              - '**.tfvars'
+              - 'Dockerfile'
+              - 'docker-compose.yml'
+              - '.github/workflows/**'
+
   rust-quality:
     name: Rust Code Quality
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'rust') || contains(github.event.pull_request.labels.*.name, 'backend')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.rust == 'true' || contains(github.event.pull_request.labels.*.name, 'rust') || contains(github.event.pull_request.labels.*.name, 'backend')
     steps:
       - uses: actions/checkout@v4
       
@@ -69,7 +98,8 @@ jobs:
   terraform-quality:
     name: Terraform Code Quality
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'terraform') || contains(github.event.pull_request.labels.*.name, 'infrastructure')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.terraform == 'true' || contains(github.event.pull_request.labels.*.name, 'terraform') || contains(github.event.pull_request.labels.*.name, 'infrastructure')
     steps:
       - uses: actions/checkout@v4
       
@@ -102,6 +132,8 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v4
       
@@ -123,6 +155,8 @@ jobs:
   dependency-check:
     name: Dependency Check
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v4
       
@@ -144,7 +178,8 @@ jobs:
   code-complexity:
     name: Code Complexity Analysis
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'rust') || contains(github.event.pull_request.labels.*.name, 'backend')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.rust == 'true' || contains(github.event.pull_request.labels.*.name, 'rust') || contains(github.event.pull_request.labels.*.name, 'backend')
     steps:
       - uses: actions/checkout@v4
       
@@ -172,7 +207,7 @@ jobs:
   pr-comment:
     name: Post Analysis Summary
     runs-on: ubuntu-latest
-    needs: [rust-quality, terraform-quality, security-scan, dependency-check, code-complexity]
+    needs: [detect-changes, rust-quality, terraform-quality, security-scan, dependency-check, code-complexity]
     if: always()
     permissions:
       contents: read
