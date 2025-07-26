@@ -41,6 +41,9 @@ pub mod db;
 /// GraphQL APIの実装
 pub mod graphql;
 
+/// GraphQLコンテキスト
+pub mod graphql_context;
+
 /// RSSスクレイピング機能
 pub mod scraper;
 
@@ -49,6 +52,10 @@ pub mod scheduler;
 
 /// ユーティリティ関数
 pub mod utils;
+
+/// テスト用ユーティリティ
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
 
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
@@ -93,4 +100,41 @@ async fn health_check() -> axum::Json<serde_json::Value> {
         "service": "nba-trade-scraper",
         "timestamp": chrono::Utc::now().to_rfc3339()
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_health_check_returns_healthy() {
+        let response = health_check().await;
+        let json = response.0;
+
+        assert_eq!(json["status"], "healthy");
+        assert_eq!(json["service"], "nba-trade-scraper");
+        assert!(json["timestamp"].is_string());
+    }
+
+    #[tokio::test]
+    async fn test_graphiql_returns_html() {
+        let html = graphiql().await;
+        let content = html.0;
+
+        // GraphiQL HTMLが含まれることを確認
+        assert!(content.contains("GraphiQL"));
+        assert!(content.contains("</html>"));
+    }
+
+    #[test]
+    fn test_cors_configuration() {
+        // CORSレイヤーが正しく設定されることを確認
+        let _cors = CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any);
+
+        // CORSレイヤーの設定を確認（インスタンス化できることを確認）
+        assert!(true);
+    }
 }

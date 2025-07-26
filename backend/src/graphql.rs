@@ -215,9 +215,91 @@ pub struct ScrapeResult {
 
 pub type QueryRoot = Query;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scraper::{NewsItem, NewsSource};
+    use chrono::Utc;
+
+    #[test]
+    fn test_trade_news_from_news_item() {
+        // NewsItemを作成
+        let news_item = NewsItem {
+            id: "test-123".to_string(),
+            title: "Lakers Trade Update".to_string(),
+            description: Some("Lakers are trading...".to_string()),
+            link: "https://example.com/news/123".to_string(),
+            source: NewsSource::ESPN,
+            category: "Trade".to_string(),
+            published_at: Utc::now(),
+        };
+
+        // TradeNewsに変換
+        let trade_news = TradeNews::from(news_item.clone());
+
+        // 各フィールドが正しく変換されていることを確認
+        assert_eq!(trade_news.id, news_item.id);
+        assert_eq!(trade_news.title, news_item.title);
+        assert_eq!(trade_news.description, news_item.description);
+        assert_eq!(trade_news.link, news_item.link);
+        assert_eq!(trade_news.source, "ESPN");
+        assert_eq!(trade_news.published_at, news_item.published_at);
+        assert_eq!(trade_news.category, news_item.category);
+    }
+
+    #[test]
+    fn test_trade_news_from_news_item_with_other_source() {
+        // Other sourceタイプのNewsItemを作成
+        let news_item = NewsItem {
+            id: "test-456".to_string(),
+            title: "NBA News".to_string(),
+            description: None,
+            link: "https://example.com/news/456".to_string(),
+            source: NewsSource::Other("Custom Source".to_string()),
+            category: "Other".to_string(),
+            published_at: Utc::now(),
+        };
+
+        // TradeNewsに変換
+        let trade_news = TradeNews::from(news_item);
+
+        // sourceがCustom Sourceとして正しく表示されることを確認
+        assert_eq!(trade_news.source, "Custom Source");
+        assert_eq!(trade_news.description, None);
+    }
+
+    #[test]
+    fn test_scrape_result_creation() {
+        let result = ScrapeResult {
+            saved_count: 10,
+            skipped_count: 5,
+            error_count: 2,
+            errors: vec![
+                "error1: Failed to save".to_string(),
+                "error2: Network error".to_string(),
+            ],
+        };
+
+        assert_eq!(result.saved_count, 10);
+        assert_eq!(result.skipped_count, 5);
+        assert_eq!(result.error_count, 2);
+        assert_eq!(result.errors.len(), 2);
+    }
+}
+
 pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription> {
     Schema::build(Query, Mutation, EmptySubscription)
         .data(pool)
+        .finish()
+}
+
+/// リポジトリを使用してGraphQLスキーマを作成（テスト用）
+#[cfg(any(test, feature = "test-utils"))]
+pub fn create_schema_with_repository(
+    repository: std::sync::Arc<dyn crate::db::repository::NewsRepository>,
+) -> Schema<Query, Mutation, EmptySubscription> {
+    Schema::build(Query, Mutation, EmptySubscription)
+        .data(repository)
         .finish()
 }
 
