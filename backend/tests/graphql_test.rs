@@ -11,7 +11,9 @@ use tower::ServiceExt;
 #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
 async fn test_graphql_playground() {
     std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool().await.unwrap();
+    let pool = nba_trade_scraper::db::connection::create_pool()
+        .await
+        .unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -35,7 +37,9 @@ async fn test_graphql_playground() {
 #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
 async fn test_trade_news_query() {
     std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool().await.unwrap();
+    let pool = nba_trade_scraper::db::connection::create_pool()
+        .await
+        .unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -64,7 +68,9 @@ async fn test_trade_news_query() {
 #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
 async fn test_trade_news_by_category_query() {
     std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool().await.unwrap();
+    let pool = nba_trade_scraper::db::connection::create_pool()
+        .await
+        .unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -93,7 +99,9 @@ async fn test_trade_news_by_category_query() {
 #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
 async fn test_trade_news_by_source_query() {
     std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool().await.unwrap();
+    let pool = nba_trade_scraper::db::connection::create_pool()
+        .await
+        .unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
@@ -122,7 +130,9 @@ async fn test_trade_news_by_source_query() {
 #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
 async fn test_invalid_query() {
     std::env::set_var("DATABASE_URL", "sqlite::memory:");
-    let pool = nba_trade_scraper::db::connection::create_pool().await.unwrap();
+    let pool = nba_trade_scraper::db::connection::create_pool()
+        .await
+        .unwrap();
     sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
     let schema = create_schema(pool);
