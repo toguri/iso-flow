@@ -1,4 +1,4 @@
-name: Unified CI
+name: PR Checks
 
 on:
   pull_request:
