@@ -1,17 +1,17 @@
 use anyhow::Result;
 use chrono::Utc;
-use sqlx::AnyPool;
+use sqlx::postgres::PgPool;
 use tracing::{error, info};
 
 use crate::scraper::models::NewsItem;
 
 /// スクレイピングしたデータをデータベースに保存する
 pub struct NewsPersistence {
-    pool: AnyPool,
+    pool: PgPool,
 }
 
 impl NewsPersistence {
-    pub fn new(pool: AnyPool) -> Self {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -68,7 +68,7 @@ impl NewsPersistence {
                 external_id, title, description, source_name, source_url,
                 category, published_at, scraped_at, created_at, updated_at
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#,
         )
         .bind(&item.id)
@@ -90,7 +90,7 @@ impl NewsPersistence {
     /// 外部IDでニュースの存在確認
     async fn exists_by_external_id(&self, external_id: &str) -> Result<bool> {
         let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE external_id = ?1")
+            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE external_id = $1")
                 .bind(external_id)
                 .fetch_one(&self.pool)
                 .await?;
@@ -116,7 +116,7 @@ impl NewsPersistence {
                 created_at
             FROM trade_news
             ORDER BY published_at DESC
-            LIMIT ?1
+            LIMIT $1
             "#,
         )
         .bind(limit)
@@ -143,7 +143,7 @@ impl NewsPersistence {
                 scraped_at,
                 created_at
             FROM trade_news
-            WHERE category = ?1
+            WHERE category = $1
             ORDER BY published_at DESC
             "#,
         )
@@ -166,7 +166,7 @@ pub struct SaveResult {
 /// データベースに保存されたニュースアイテム
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SavedNewsItem {
-    pub id: Option<i64>, // SQLiteのINTEGER PRIMARY KEYはi64
+    pub id: Option<i64>, // PostgreSQLのSERIALはi64として扱われる
     pub external_id: String,
     pub title: String,
     pub description: Option<String>,
@@ -184,7 +184,7 @@ mod tests {
     use super::*;
     use crate::scraper::models::NewsSource;
 
-    async fn setup_test_db() -> AnyPool {
+    async fn setup_test_db() -> PgPool {
         // 一時的にダミーの実装
         // TODO: モック化または統合テスト環境の構築が必要
         panic!("Test DB setup not implemented - tests are temporarily disabled");

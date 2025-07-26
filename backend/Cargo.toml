@@ -50,8 +50,8 @@ async-graphql = { version = "7.0", features = ["apollo_tracing", "log"] }
 async-graphql-axum = "7.0"
 
 # データベース
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "postgres", "migrate", "chrono", "any"] }
-sea-orm = { version = "1.1", features = ["sqlx-sqlite", "sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "migrate", "chrono"] }
+sea-orm = { version = "1.1", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"] }
 sea-orm-migration = "1.1"
 clap = { version = "4.5.41", features = ["derive"] }
 

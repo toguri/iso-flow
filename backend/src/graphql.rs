@@ -10,7 +10,7 @@
 
 use async_graphql::{Context, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
-use sqlx::AnyPool;
+use sqlx::postgres::PgPool;
 use tracing::info;
 
 use crate::scraper::{NewsItem, NewsPersistence, RssParser};
@@ -57,7 +57,7 @@ impl Query {
     ///
     /// 最新100件のニュースを返します
     async fn trade_news(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<AnyPool>()?;
+        let pool = ctx.data::<PgPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         let saved_items = persistence.get_recent_news(100).await?;
@@ -92,7 +92,7 @@ impl Query {
         ctx: &Context<'_>,
         category: String,
     ) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<AnyPool>()?;
+        let pool = ctx.data::<PgPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         let saved_items = persistence.get_news_by_category(&category).await?;
@@ -126,7 +126,7 @@ impl Query {
         ctx: &Context<'_>,
         source: String,
     ) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<AnyPool>()?;
+        let pool = ctx.data::<PgPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         // ソース別のフィルタリングは現在のpersistenceに実装されていないので、
@@ -166,7 +166,7 @@ pub struct Mutation;
 impl Mutation {
     /// RSSフィードをスクレイピングしてデータベースに保存
     async fn scrape_rss(&self, ctx: &Context<'_>) -> async_graphql::Result<ScrapeResult> {
-        let pool = ctx.data::<AnyPool>()?;
+        let pool = ctx.data::<PgPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         info!("Starting RSS scraping via GraphQL mutation...");
@@ -215,7 +215,7 @@ pub struct ScrapeResult {
 
 pub type QueryRoot = Query;
 
-pub fn create_schema(pool: AnyPool) -> Schema<Query, Mutation, EmptySubscription> {
+pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription> {
     Schema::build(Query, Mutation, EmptySubscription)
         .data(pool)
         .finish()

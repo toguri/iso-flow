@@ -11,16 +11,16 @@
    - ECS Terraformモジュールの実装
    - ALBとターゲットグループの設定
 
-2. **マルチデータベース対応の実装**
-   - SQLiteとPostgreSQLの両方に対応したコードに更新
-   - AnyPoolを使用したデータベース抽象化
+2. **PostgreSQL専用データベース実装**
+   - PostgreSQL専用のデータベース接続実装
+   - PgPoolを使用した直接的なPostgreSQL接続
    - PostgreSQL用のマイグレーションスクリプト作成
 
 #### 技術的な課題と解決
-1. **AnyPoolの型変換問題**
-   - SQLxのquery!マクロからquery()関数への移行
+1. **PostgreSQL移行の実装**
+   - SQLiteサポートを完全に削除
+   - すべてのAnyPoolをPgPoolに置き換え
    - 時刻型をRFC3339文字列として扱うように変更
-   - テストとバイナリでAnyPoolを使用するように更新
 
 2. **CI/CDのエラー修正**
    - Rustフォーマットエラーの修正
@@ -32,16 +32,16 @@
    - 誤ってコミットされたファイルを削除
 
 #### 現在の問題
-- **AnyPoolのテスト失敗**
-  - SQLite URLスキーマをsqlite::memory:からsqlite://:memory:に変更
-  - それでも"No drivers installed"エラーが発生
-  - SQLxのAnyドライバーの設定問題を調査中
+- **PostgreSQL専用化の完了**
+  - SQLiteサポートを完全に削除済み
+  - すべてのテストがPostgreSQLを使用するように更新
+  - ドキュメントの更新作業中
 
 ### 明日の予定 🌅
 
-1. **AnyPoolテストエラーの解決**
-   - 別のアプローチを検討（条件コンパイルまたはEnumラップ）
-   - テスト環境でのSQLiteドライバー設定の修正
+1. **PostgreSQL専用化の完了**
+   - ドキュメント更新の完了
+   - テスト環境のPostgreSQL設定確認
 
 2. **PR #32の完成とマージ**
    - CI/CDのすべてのチェックをパス
@@ -52,8 +52,8 @@
    - ECRへの自動プッシュ設定
 
 ### メモ 📝
-- AnyPoolの使用はマルチデータベース対応には便利だが、型制約が強い
-- SQLxのquery!マクロはコンパイル時チェックのためAnyデータベースでは使用不可
+- PostgreSQL専用化により、型安全性とパフォーマンスが向上
+- SQLxのquery!マクロが再び使用可能になる
 - カバレッジファイルは早めに.gitignoreに追加すべき
 
 ---
