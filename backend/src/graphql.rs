@@ -10,7 +10,7 @@
 
 use async_graphql::{Context, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
-use sqlx::SqlitePool;
+use sqlx::AnyPool;
 use tracing::info;
 
 use crate::scraper::{NewsItem, NewsPersistence, RssParser};
@@ -57,7 +57,7 @@ impl Query {
     ///
     /// 最新100件のニュースを返します
     async fn trade_news(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<SqlitePool>()?;
+        let pool = ctx.data::<AnyPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         let saved_items = persistence.get_recent_news(100).await?;
@@ -215,7 +215,7 @@ pub struct ScrapeResult {
 
 pub type QueryRoot = Query;
 
-pub fn create_schema(pool: SqlitePool) -> Schema<Query, Mutation, EmptySubscription> {
+pub fn create_schema(pool: AnyPool) -> Schema<Query, Mutation, EmptySubscription> {
     Schema::build(Query, Mutation, EmptySubscription)
         .data(pool)
         .finish()

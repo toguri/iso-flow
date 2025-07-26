@@ -56,7 +56,7 @@ use axum::{routing::get, Router};
 use tower_http::cors::{Any, CorsLayer};
 
 /// アプリケーションの作成
-pub fn create_app(pool: sqlx::SqlitePool) -> Router {
+pub fn create_app(pool: sqlx::AnyPool) -> Router {
     let schema = graphql::create_schema(pool);
 
     let cors = CorsLayer::new()
@@ -86,6 +86,10 @@ async fn graphiql() -> axum::response::Html<String> {
     )
 }
 
-async fn health_check() -> &'static str {
-    "OK"
+async fn health_check() -> axum::Json<serde_json::Value> {
+    axum::Json(serde_json::json!({
+        "status": "healthy",
+        "service": "nba-trade-scraper",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
 }

@@ -1,6 +1,5 @@
 use axum::serve;
-use nba_trade_scraper::create_app;
-use sqlx::SqlitePool;
+use nba_trade_scraper::{create_app, db::connection::create_pool};
 use tokio::net::TcpListener;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
@@ -16,12 +15,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting GraphQL server...");
 
     // データベース接続の初期化
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
-    let pool = SqlitePool::connect(&database_url).await?;
-
-    // マイグレーション実行
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    let pool = create_pool().await?;
+    
+    // DATABASE_URLから適切なマイグレーションを実行
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:nba_trades.db".to_string());
+    
+    if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
+        info!("Running PostgreSQL migrations...");
+        sqlx::migrate!("./migrations_postgres").run(&pool).await?;
+    } else {
+        info!("Running SQLite migrations...");
+        sqlx::migrate!("./migrations").run(&pool).await?;
+    }
 
     info!("Database initialized");
 

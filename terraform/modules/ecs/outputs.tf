@@ -37,3 +37,13 @@ output "task_definition_arn" {
   description = "ECS task definition ARN"
   value       = aws_ecs_task_definition.main.arn
 }
+
+output "ecs_service_security_group_id" {
+  description = "Security group ID for ECS service"
+  value       = aws_security_group.ecs_service.id
+}
+
+output "alb_security_group_id" {
+  description = "Security group ID for ALB"
+  value       = aws_security_group.alb.id
+}
