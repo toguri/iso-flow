@@ -5,6 +5,7 @@
 
 pub mod connection;
 pub mod models;
+pub mod repository;
 pub mod simple_repository;
 
 // Note: create_pool is now in the connection module and returns PgPool
