@@ -4,7 +4,7 @@
 NBA Trade Scraperのデータベース設計ドキュメント。
 
 ## データベース選定
-- **開発環境**: SQLite（シンプル、設定不要）
+- **開発環境**: PostgreSQL（本番環境と同一）
 - **本番環境**: PostgreSQL（スケーラビリティ、JSON対応、全文検索）
 
 ## テーブル設計
@@ -12,7 +12,7 @@ NBA Trade Scraperのデータベース設計ドキュメント。
 ### 1. teams（チーム情報）
 ```sql
 CREATE TABLE teams (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     code VARCHAR(3) UNIQUE NOT NULL,  -- 例: LAL, BOS
     name VARCHAR(100) NOT NULL,       -- 例: Los Angeles Lakers
     name_ja VARCHAR(100),             -- 例: ロサンゼルス・レイカーズ
@@ -26,46 +26,34 @@ CREATE TABLE teams (
 ### 2. players（選手情報）
 ```sql
 CREATE TABLE players (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(100) NOT NULL,       -- 原文名
-    name_ja VARCHAR(100),             -- カタカナ表記
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,       -- 例: LeBron James
+    name_ja VARCHAR(200),             -- 例: レブロン・ジェームズ
+    team_id INTEGER REFERENCES teams(id),
     position VARCHAR(10),             -- PG, SG, SF, PF, C
-    current_team_id INTEGER REFERENCES teams(id),
     jersey_number INTEGER,
-    status VARCHAR(20) DEFAULT 'active',  -- active, injured, retired
+    status VARCHAR(20),               -- active, injured, suspended
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-### 3. trade_news（トレードニュース）
+### 3. trade_news（トレード関連ニュース）
 ```sql
 CREATE TABLE trade_news (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    external_id VARCHAR(255) UNIQUE NOT NULL,  -- RSSフィードのID
-    
-    -- 原文データ
-    title TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    external_id VARCHAR(500) UNIQUE NOT NULL,     -- RSS GUIDまたはURLのハッシュ
+    title VARCHAR(500) NOT NULL,
+    title_ja VARCHAR(500),                        -- 翻訳後タイトル
     description TEXT,
-    
-    -- 翻訳データ（キャッシュ）
-    title_ja TEXT,
-    description_ja TEXT,
-    translation_status VARCHAR(20) DEFAULT 'pending', -- pending, completed, failed
-    translated_at TIMESTAMP,
-    
-    -- ソース情報（引用元明記）
-    source_name VARCHAR(50) NOT NULL,      -- ESPN, RealGM等
-    source_url VARCHAR(500) NOT NULL,      -- 元記事URL
-    author VARCHAR(100),                   -- 記者名（取得可能な場合）
-    
-    -- 分類情報
-    category VARCHAR(20) NOT NULL,         -- Trade, Signing, Other
-    is_official BOOLEAN DEFAULT FALSE,     -- 公式発表かどうか
-    
-    -- タイムスタンプ
-    published_at TIMESTAMP NOT NULL,       -- 元記事の公開日時
+    description_ja TEXT,                          -- 翻訳後説明
+    source_name VARCHAR(100) NOT NULL,            -- ESPN, RealGM等
+    source_url TEXT NOT NULL,
+    category VARCHAR(50),                         -- Trade, Rumor, Signing等
+    is_official BOOLEAN DEFAULT FALSE,            -- 公式発表フラグ
+    published_at TIMESTAMP NOT NULL,
     scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    translation_status VARCHAR(20) DEFAULT 'pending', -- pending, completed, failed
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -74,59 +62,60 @@ CREATE TABLE trade_news (
 CREATE INDEX idx_trade_news_published_at ON trade_news(published_at DESC);
 CREATE INDEX idx_trade_news_category ON trade_news(category);
 CREATE INDEX idx_trade_news_source ON trade_news(source_name);
-CREATE INDEX idx_trade_news_translation ON trade_news(translation_status);
+CREATE INDEX idx_trade_news_translation_status ON trade_news(translation_status);
 ```
 
-### 4. trade_news_teams（ニュースとチームの関連）
+### 4. trade_details（トレード詳細）
+将来的な拡張用
 ```sql
-CREATE TABLE trade_news_teams (
-    trade_news_id INTEGER REFERENCES trade_news(id) ON DELETE CASCADE,
-    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
-    PRIMARY KEY (trade_news_id, team_id)
+CREATE TABLE trade_details (
+    id SERIAL PRIMARY KEY,
+    news_id INTEGER REFERENCES trade_news(id),
+    from_team_id INTEGER REFERENCES teams(id),
+    to_team_id INTEGER REFERENCES teams(id),
+    player_id INTEGER REFERENCES players(id),
+    trade_type VARCHAR(50),  -- trade, waive, sign, draft
+    contract_details JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-### 5. trade_news_players（ニュースと選手の関連）
-```sql
-CREATE TABLE trade_news_players (
-    trade_news_id INTEGER REFERENCES trade_news(id) ON DELETE CASCADE,
-    player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
-    PRIMARY KEY (trade_news_id, player_id)
-);
-```
-
-### 6. raw_feed_data（生データ保存）
+### 5. raw_feed_data（生フィードデータ）
+デバッグ・監査用
 ```sql
 CREATE TABLE raw_feed_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_name VARCHAR(50) NOT NULL,
-    feed_url VARCHAR(500) NOT NULL,
-    raw_content TEXT NOT NULL,         -- RSS XMLの生データ
+    id SERIAL PRIMARY KEY,
+    feed_url TEXT NOT NULL,
+    raw_content TEXT NOT NULL,
+    content_hash VARCHAR(64) UNIQUE NOT NULL,
     fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-## データ保存・翻訳ポリシー
+## 命名規則
 
-### 1. 元データの保持
-- **原則**: 常に元の英語データを保存
-- **理由**: データの完全性、翻訳品質向上時の再翻訳可能性
+- テーブル名: 複数形のsnake_case（例: trade_news）
+- カラム名: snake_case（例: published_at）
+- 主キー: id
+- 外部キー: {参照テーブル名}_id（例: team_id）
+- タイムスタンプ: created_at, updated_at, {動作}_at
 
-### 2. 翻訳タイミング
-- **Option A**: スクレイピング後にバッチで翻訳（推奨）
-  - メリット: API呼び出し効率化、表示高速化
-  - デメリット: ストレージ使用量増加
-  
-- **Option B**: 表示時にリアルタイム翻訳
-  - メリット: 常に最新の翻訳
-  - デメリット: 表示遅延、API費用増加
+## インデックス戦略
 
-### 3. 引用元の明記
-画面表示時には必ず以下を表示：
-- ソース名（ESPN、RealGM等）
-- 元記事へのリンク
-- 記事公開日時
-- 可能な場合は記者名
+1. **頻繁に検索される項目**
+   - published_at（時系列表示）
+   - category（カテゴリフィルタ）
+   - source_name（ソース別表示）
+
+2. **ユニーク制約**
+   - external_id（重複防止）
+   - content_hash（重複コンテンツ防止）
+
+## GraphQL連携
+
+- trade_newsテーブルがメインのデータソース
+- リアルタイムフィードとDBキャッシュの併用
+- 翻訳ステータスによる表示制御
 
 例：
 ```
@@ -136,15 +125,16 @@ CREATE TABLE raw_feed_data (
 
 ## マイグレーション戦略
 
-1. **開発環境（SQLite）**
-   ```bash
-   # sqliteファイルで管理
-   backend/nba_trades.db
-   ```
+### 開発・本番環境共通（PostgreSQL）
+```bash
+# SQLx CLIを使用
+sqlx migrate run
+```
 
-2. **本番移行時**
-   - SQLiteからPostgreSQLへのデータ移行スクリプト
-   - AUTOINCREMENT → SERIAL への変換
+### マイグレーション管理
+1. すべての環境でPostgreSQLを使用
+2. migrations_postgresディレクトリで一元管理
+3. バージョン管理とロールバックのサポート
 
 ## 今後の拡張考慮事項
 - 翻訳履歴テーブル（翻訳品質向上のため）

@@ -74,14 +74,18 @@ rustup component add clippy
 rustup component add rustfmt
 ```
 
-### SQLiteのセットアップ（ローカル開発用）
+### PostgreSQLのセットアップ（ローカル開発用）
 
 ```bash
 # macOSの場合（Homebrewを使用）
-brew install sqlite3
+brew install postgresql@15
+brew services start postgresql@15
 
 # 確認
-sqlite3 --version
+psql --version
+
+# データベースの作成
+createdb nbatracker
 ```
 
 ## プロジェクトのセットアップ
@@ -101,11 +105,17 @@ cd backend
 # 環境変数ファイルの作成
 cp .env.example .env
 
+# DATABASE_URLを設定（.envファイルを編集）
+# DATABASE_URL=postgresql://localhost/nbatracker
+
 # 依存関係のインストール
 cargo build
 
+# SQLx CLIのインストール（初回のみ）
+cargo install sqlx-cli --no-default-features --features postgres
+
 # データベースマイグレーションの実行
-cargo run --bin migrate
+sqlx migrate run
 
 # 開発サーバーの起動
 cargo run

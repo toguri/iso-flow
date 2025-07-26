@@ -72,11 +72,10 @@ module "rds" {
 
 ## 移行ガイド
 
-SQLiteからの移行は、付属の移行スクリプトを使用：
+PostgreSQLへの移行は、SQLxのマイグレーション機能を使用：
 
 ```bash
-cd backend/scripts
+cd backend
 export DATABASE_URL="postgresql://..."
-export SQLITE_DB_PATH="./nba_trades.db"
-./migrate_to_aurora.sh
+sqlx migrate run
 ```
