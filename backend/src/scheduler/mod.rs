@@ -110,32 +110,35 @@ mod tests {
         // JobScheduler自体のテストはtokio-cron-schedulerライブラリの責任なので、
         // ここでは基本的な作成のみをテスト
         let scheduler = JobScheduler::new().await;
-        assert!(scheduler.is_ok(), "JobScheduler should be created successfully");
+        assert!(
+            scheduler.is_ok(),
+            "JobScheduler should be created successfully"
+        );
     }
 
     #[test]
     fn test_job_duration_calculation() {
         // 時間計算のロジックをテスト
         use std::time::Duration;
-        
+
         // 1分ごとのcron式の場合
         let one_minute = Duration::from_secs(60);
         assert_eq!(one_minute.as_secs(), 60);
-        
+
         // 30秒のone-shotジョブの場合
         let thirty_seconds = Duration::from_secs(30);
         assert_eq!(thirty_seconds.as_secs(), 30);
     }
-    
+
     #[test]
     fn test_uuid_generation() {
         // UUID生成が正しく動作することをテスト
         let uuid1 = Uuid::new_v4();
         let uuid2 = Uuid::new_v4();
-        
+
         // UUIDが異なることを確認
         assert_ne!(uuid1, uuid2);
-        
+
         // UUID文字列の形式を確認
         let uuid_str = uuid1.to_string();
         assert_eq!(uuid_str.len(), 36); // 8-4-4-4-12形式

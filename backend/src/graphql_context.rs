@@ -2,8 +2,8 @@
 //!
 //! リポジトリトレイトを使ってテスト可能な設計にします。
 
-use std::sync::Arc;
 use crate::db::repository::NewsRepository;
+use std::sync::Arc;
 
 /// GraphQLコンテキスト
 pub struct GraphQLContext {

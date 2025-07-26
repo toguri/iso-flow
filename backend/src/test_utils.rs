@@ -2,13 +2,13 @@
 //!
 //! モックを使ったテスト用のヘルパー関数を提供します。
 
-use std::sync::Arc;
-use axum::Router;
-use async_graphql::{EmptySubscription, Schema};
 use crate::{
     db::repository::{mock::MockNewsRepository, NewsRepository},
-    graphql::{create_schema_with_repository, Query, Mutation},
+    graphql::{create_schema_with_repository, Mutation, Query},
 };
+use async_graphql::{EmptySubscription, Schema};
+use axum::Router;
+use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
 /// モックリポジトリを使用してテスト用アプリケーションを作成

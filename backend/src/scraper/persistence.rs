@@ -185,7 +185,7 @@ mod tests {
 
     // これらのテストは統合テストとして実装すべきなので、
     // 単体テストからは削除し、モックを使った単体テストに置き換える
-    
+
     #[test]
     fn test_save_result_struct() {
         // SaveResult構造体の基本的な動作をテスト
@@ -194,13 +194,13 @@ mod tests {
             skipped_count: 2,
             errors: vec![("id-1".to_string(), "error message".to_string())],
         };
-        
+
         assert_eq!(result.saved_count, 5);
         assert_eq!(result.skipped_count, 2);
         assert_eq!(result.errors.len(), 1);
         assert_eq!(result.errors[0].0, "id-1");
     }
-    
+
     #[test]
     fn test_saved_news_item_struct() {
         // SavedNewsItem構造体の基本的な動作をテスト
@@ -217,7 +217,7 @@ mod tests {
             scraped_at: Some("2023-07-26T13:00:00Z".to_string()),
             created_at: Some("2023-07-26T13:00:00Z".to_string()),
         };
-        
+
         assert_eq!(item.external_id, "ext-1");
         assert_eq!(item.title, "Test Title");
         assert_eq!(item.source_name, "ESPN");

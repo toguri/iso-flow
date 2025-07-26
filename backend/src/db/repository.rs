@@ -15,16 +15,16 @@ use crate::scraper::NewsItem;
 pub trait NewsRepository: Send + Sync {
     /// 全てのニュースを取得
     async fn get_all_news(&self) -> Result<Vec<NewsItem>>;
-    
+
     /// カテゴリー別にニュースを取得
     async fn get_news_by_category(&self, category: &str) -> Result<Vec<NewsItem>>;
-    
+
     /// ソース別にニュースを取得
     async fn get_news_by_source(&self, source: &str) -> Result<Vec<NewsItem>>;
-    
+
     /// ニュースを保存
     async fn save_news(&self, items: Vec<NewsItem>) -> Result<()>;
-    
+
     /// 最近のニュースを取得
     async fn get_recent_news(&self, since: DateTime<Utc>) -> Result<Vec<NewsItem>>;
 }
@@ -43,12 +43,23 @@ impl PgNewsRepository {
 #[async_trait]
 impl NewsRepository for PgNewsRepository {
     async fn get_all_news(&self) -> Result<Vec<NewsItem>> {
-        let rows = sqlx::query_as::<_, (String, String, Option<String>, String, String, DateTime<Utc>, String)>(
+        let rows = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                Option<String>,
+                String,
+                String,
+                DateTime<Utc>,
+                String,
+            ),
+        >(
             r#"
             SELECT id, title, description, link, source, published_at, category
             FROM trade_news
             ORDER BY published_at DESC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -68,13 +79,24 @@ impl NewsRepository for PgNewsRepository {
     }
 
     async fn get_news_by_category(&self, category: &str) -> Result<Vec<NewsItem>> {
-        let rows = sqlx::query_as::<_, (String, String, Option<String>, String, String, DateTime<Utc>, String)>(
+        let rows = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                Option<String>,
+                String,
+                String,
+                DateTime<Utc>,
+                String,
+            ),
+        >(
             r#"
             SELECT id, title, description, link, source, published_at, category
             FROM trade_news
             WHERE category = $1
             ORDER BY published_at DESC
-            "#
+            "#,
         )
         .bind(category)
         .fetch_all(&self.pool)
@@ -95,13 +117,24 @@ impl NewsRepository for PgNewsRepository {
     }
 
     async fn get_news_by_source(&self, source: &str) -> Result<Vec<NewsItem>> {
-        let rows = sqlx::query_as::<_, (String, String, Option<String>, String, String, DateTime<Utc>, String)>(
+        let rows = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                Option<String>,
+                String,
+                String,
+                DateTime<Utc>,
+                String,
+            ),
+        >(
             r#"
             SELECT id, title, description, link, source, published_at, category
             FROM trade_news
             WHERE source = $1
             ORDER BY published_at DESC
-            "#
+            "#,
         )
         .bind(source)
         .fetch_all(&self.pool)
@@ -144,13 +177,24 @@ impl NewsRepository for PgNewsRepository {
     }
 
     async fn get_recent_news(&self, since: DateTime<Utc>) -> Result<Vec<NewsItem>> {
-        let rows = sqlx::query_as::<_, (String, String, Option<String>, String, String, DateTime<Utc>, String)>(
+        let rows = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                Option<String>,
+                String,
+                String,
+                DateTime<Utc>,
+                String,
+            ),
+        >(
             r#"
             SELECT id, title, description, link, source, published_at, category
             FROM trade_news
             WHERE published_at > $1
             ORDER BY published_at DESC
-            "#
+            "#,
         )
         .bind(since)
         .fetch_all(&self.pool)
