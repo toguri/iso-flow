@@ -36,132 +36,8 @@ module "vpc" {
   availability_zones = data.aws_availability_zones.available.names
 }
 
-# Security Groups
-resource "aws_security_group" "alb" {
-  name_prefix = "${var.project_name}-${var.environment}-alb-"
-  description = "Security group for ALB"
-  vpc_id      = module.vpc.vpc_id
-  
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_security_group" "ecs_tasks" {
-  name_prefix = "${var.project_name}-${var.environment}-ecs-tasks-"
-  description = "Security group for ECS tasks"
-  vpc_id      = module.vpc.vpc_id
-  
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-  
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
+# Note: Security Groups, ALB, and ECS configuration have been moved to ecs.tf
 # Note: RDS configuration has been moved to rds.tf
-
-# ECS Cluster
-resource "aws_ecs_cluster" "main" {
-  name = "${var.project_name}-${var.environment}"
-  
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
-}
-
-# Application Load Balancer
-resource "aws_lb" "main" {
-  name               = "${var.project_name}-${var.environment}"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = module.vpc.public_subnet_ids
-  
-  enable_deletion_protection = var.environment == "prod" ? true : false
-  enable_http2              = true
-  
-  access_logs {
-    bucket  = aws_s3_bucket.alb_logs.id
-    prefix  = "alb"
-    enabled = true
-  }
-}
-
-resource "aws_lb_target_group" "app" {
-  name                 = "${var.project_name}-${var.environment}"
-  port                 = 80
-  protocol             = "HTTP"
-  vpc_id               = module.vpc.vpc_id
-  target_type          = "ip"
-  deregistration_delay = 30
-  
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    interval            = 30
-    matcher             = "200"
-    path                = "/health"
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
-  }
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = "80"
-  protocol          = "HTTP"
-  
-  default_action {
-    type = "redirect"
-    
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-}
 
 # S3 Buckets
 resource "aws_s3_bucket" "frontend" {
@@ -311,9 +187,7 @@ output "vpc_id" {
   value = module.vpc.vpc_id
 }
 
-output "alb_dns_name" {
-  value = aws_lb.main.dns_name
-}
+# Note: ALB output has been moved to ecs.tf
 
 # Note: RDS outputs have been moved to rds.tf
 

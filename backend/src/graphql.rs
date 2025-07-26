@@ -10,7 +10,7 @@
 
 use async_graphql::{Context, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
-use sqlx::SqlitePool;
+use sqlx::AnyPool;
 use tracing::info;
 
 use crate::scraper::{NewsItem, NewsPersistence, RssParser};
@@ -57,7 +57,7 @@ impl Query {
     ///
     /// 最新100件のニュースを返します
     async fn trade_news(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<SqlitePool>()?;
+        let pool = ctx.data::<AnyPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         let saved_items = persistence.get_recent_news(100).await?;
@@ -66,10 +66,10 @@ impl Query {
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
-                // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
-                let unix_timestamp = item.published_at.unix_timestamp();
-                let published_at =
-                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+                // RFC3339文字列からchrono::DateTime<Utc>に変換
+                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
 
                 let news_item = NewsItem {
                     id: item.external_id,
@@ -92,7 +92,7 @@ impl Query {
         ctx: &Context<'_>,
         category: String,
     ) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<SqlitePool>()?;
+        let pool = ctx.data::<AnyPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         let saved_items = persistence.get_news_by_category(&category).await?;
@@ -100,10 +100,10 @@ impl Query {
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
-                // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
-                let unix_timestamp = item.published_at.unix_timestamp();
-                let published_at =
-                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+                // RFC3339文字列からchrono::DateTime<Utc>に変換
+                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
 
                 let news_item = NewsItem {
                     id: item.external_id,
@@ -126,7 +126,7 @@ impl Query {
         ctx: &Context<'_>,
         source: String,
     ) -> async_graphql::Result<Vec<TradeNews>> {
-        let pool = ctx.data::<SqlitePool>()?;
+        let pool = ctx.data::<AnyPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         // ソース別のフィルタリングは現在のpersistenceに実装されていないので、
@@ -137,10 +137,10 @@ impl Query {
             .into_iter()
             .filter(|item| item.source_name.to_lowercase() == source.to_lowercase())
             .map(|item| {
-                // time::OffsetDateTimeからchrono::DateTime<Utc>に変換
-                let unix_timestamp = item.published_at.unix_timestamp();
-                let published_at =
-                    DateTime::<Utc>::from_timestamp(unix_timestamp, 0).unwrap_or_else(Utc::now);
+                // RFC3339文字列からchrono::DateTime<Utc>に変換
+                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
 
                 let news_item = NewsItem {
                     id: item.external_id,
@@ -166,7 +166,7 @@ pub struct Mutation;
 impl Mutation {
     /// RSSフィードをスクレイピングしてデータベースに保存
     async fn scrape_rss(&self, ctx: &Context<'_>) -> async_graphql::Result<ScrapeResult> {
-        let pool = ctx.data::<SqlitePool>()?;
+        let pool = ctx.data::<AnyPool>()?;
         let persistence = NewsPersistence::new(pool.clone());
 
         info!("Starting RSS scraping via GraphQL mutation...");
@@ -215,7 +215,7 @@ pub struct ScrapeResult {
 
 pub type QueryRoot = Query;
 
-pub fn create_schema(pool: SqlitePool) -> Schema<Query, Mutation, EmptySubscription> {
+pub fn create_schema(pool: AnyPool) -> Schema<Query, Mutation, EmptySubscription> {
     Schema::build(Query, Mutation, EmptySubscription)
         .data(pool)
         .finish()
