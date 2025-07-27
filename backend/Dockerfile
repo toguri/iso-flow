@@ -14,14 +14,16 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 
 # Build dependencies (this is cached if dependencies don't change)
-RUN mkdir src && \
+RUN mkdir -p src/bin && \
     echo "fn main() {}" > src/main.rs && \
+    echo "fn main() {}" > src/bin/scheduler.rs && \
+    echo "fn main() {}" > src/bin/scrape.rs && \
+    echo "fn main() {}" > src/bin/init_scrape.rs && \
     cargo build --release && \
     rm -rf src
 
 # Copy source code
 COPY src ./src
-COPY migrations ./migrations
 COPY migrations_postgres ./migrations_postgres
 
 # Build application
@@ -44,7 +46,6 @@ RUN groupadd -r app && useradd -r -g app app
 COPY --from=builder /app/target/release/nba-trade-scraper /usr/local/bin/nba-trade-scraper
 
 # Copy migrations
-COPY --from=builder /app/migrations /app/migrations
 COPY --from=builder /app/migrations_postgres /app/migrations_postgres
 
 # Set working directory

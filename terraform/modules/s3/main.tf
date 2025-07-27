@@ -1,5 +1,16 @@
 # S3 Module for Frontend and MWAA DAGs
 
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 locals {
   name = "${var.project_name}-${var.environment}"
 }
@@ -45,11 +56,11 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "PublicReadGetObject"
-        Effect = "Allow"
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
         Principal = "*"
-        Action = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
       }
     ]
   })
@@ -70,7 +81,7 @@ resource "aws_s3_bucket" "mwaa_dags" {
 # S3 Bucket Versioning for MWAA
 resource "aws_s3_bucket_versioning" "mwaa_dags" {
   bucket = aws_s3_bucket.mwaa_dags.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
