@@ -49,7 +49,7 @@ class GraphQLClient {
         }
     }
     
-    private val endpoint = "http://localhost:8000/graphql"
+    private val endpoint = "http://localhost:8000/"
     
     suspend fun fetchNewsItems(category: String? = null): List<NewsItem> {
         return if (category == null) {
