@@ -97,10 +97,6 @@ variable "container_port" {
   default     = 8080
 }
 
-variable "ecr_repository_url" {
-  description = "ECR repository URL for container image"
-  type        = string
-}
 
 variable "container_image_tag" {
   description = "Container image tag"
