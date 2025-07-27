@@ -45,10 +45,26 @@ ignore:
   - "backend/tests/**/*"
   - "backend/src/bin/**/*"
   - "backend/src/main.rs"  # エントリーポイント
-  - "frontend/**/*"
   - "terraform/**/*"
   - "airflow/**/*"
   # データベース接続関連（統合テストで確認）
   - "backend/src/db/connection.rs"
   # マイグレーション関連
   - "**/migrations/**/*"
+
+# フロントエンドのパス修正
+# 現在はダミーカバレッジを使用しているため、実際にはこのfixは使われていない
+# もし将来的に実際のカバレッジ測定を行う場合のために残しておく
+fixes:
+  - "../../../../compileSync/js/test/testDevelopmentExecutable/kotlin/::frontend/build/compileSync/js/test/testDevelopmentExecutable/kotlin/"
+
+# フラグ設定
+flags:
+  backend:
+    paths:
+      - backend/
+    carryforward: true
+  frontend:
+    paths:
+      - frontend/
+    carryforward: true

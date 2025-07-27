@@ -44,6 +44,11 @@ kotlin {
                 implementation(kotlin("test-js"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
                 implementation("io.ktor:ktor-client-mock:2.3.7")
+                
+                // カバレッジツール
+                implementation(npm("karma-coverage", "2.2.1"))
+                implementation(npm("karma-coverage-istanbul-reporter", "3.0.3"))
+                implementation(npm("istanbul-instrumenter-loader", "3.0.1"))
             }
         }
     }
