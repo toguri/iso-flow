@@ -38,5 +38,13 @@ kotlin {
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
             }
         }
+        
+        val jsTest by getting {
+            dependencies {
+                implementation(kotlin("test-js"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+                implementation("io.ktor:ktor-client-mock:2.3.7")
+            }
+        }
     }
 }
