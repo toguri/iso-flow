@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "karma-coverage": "^2.2.1"
+  }
+}
