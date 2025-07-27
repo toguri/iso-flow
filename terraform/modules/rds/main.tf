@@ -1,5 +1,16 @@
 # RDS Aurora Serverless v2 Module
 
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 locals {
   name = "${var.project_name}-${var.environment}"
 }
@@ -107,13 +118,13 @@ resource "aws_rds_cluster" "main" {
     min_capacity = 0.5
   }
 
-  backup_retention_period = 7
-  preferred_backup_window = "03:00-04:00"
+  backup_retention_period      = 7
+  preferred_backup_window      = "03:00-04:00"
   preferred_maintenance_window = "sun:04:00-sun:05:00"
 
   enabled_cloudwatch_logs_exports = ["postgresql"]
 
-  skip_final_snapshot = var.environment != "prod"
+  skip_final_snapshot       = var.environment != "prod"
   final_snapshot_identifier = var.environment == "prod" ? "${local.name}-aurora-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
 
   tags = merge(var.tags, {
@@ -134,8 +145,8 @@ resource "aws_rds_cluster_instance" "main" {
   db_parameter_group_name = aws_db_parameter_group.main.name
 
   performance_insights_enabled = true
-  monitoring_interval         = 60
-  monitoring_role_arn        = aws_iam_role.rds_monitoring.arn
+  monitoring_interval          = 60
+  monitoring_role_arn          = aws_iam_role.rds_monitoring.arn
 
   tags = merge(var.tags, {
     Name = "${local.name}-aurora-instance-${count.index + 1}"

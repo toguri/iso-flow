@@ -1,5 +1,16 @@
 # ECS Fargate Module for Backend API
 
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 locals {
   name = "${var.project_name}-${var.environment}"
 }
@@ -168,7 +179,7 @@ resource "aws_lb" "main" {
   subnets            = var.public_subnets
 
   enable_deletion_protection = var.environment == "prod"
-  enable_http2              = true
+  enable_http2               = true
 
   tags = merge(var.tags, {
     Name = "${local.name}-alb"
@@ -177,10 +188,10 @@ resource "aws_lb" "main" {
 
 # ALB Target Group
 resource "aws_lb_target_group" "main" {
-  name     = "${local.name}-tg"
-  port     = 8000
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  name        = "${local.name}-tg"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
   target_type = "ip"
 
   health_check {
@@ -259,13 +270,13 @@ resource "aws_ecs_task_definition" "main" {
   cpu                      = var.task_cpu
   memory                   = var.task_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
-  task_role_arn           = aws_iam_role.ecs_task.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([
     {
       name  = "backend"
       image = "${aws_ecr_repository.main.repository_url}:latest"
-      
+
       environment = [
         {
           name  = "RUST_LOG"

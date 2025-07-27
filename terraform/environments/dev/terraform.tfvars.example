@@ -24,7 +24,7 @@ ecs_task_memory   = "512"   # 512 MB
 ecs_desired_count = 1       # Single instance for dev
 
 # Container Configuration
-ecr_repository_url  = "YOUR_AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/iso-flow"
+# ecr_repository_url is now dynamically generated using data.aws_caller_identity
 container_image_tag = "latest"
 container_port      = 8080
 
