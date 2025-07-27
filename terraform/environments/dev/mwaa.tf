@@ -10,7 +10,6 @@ module "mwaa" {
   vpc_id          = module.vpc.vpc_id
   private_subnets = module.vpc.private_subnet_ids
 
-  dag_s3_bucket     = aws_s3_bucket.mwaa.id
   dag_s3_bucket_arn = aws_s3_bucket.mwaa.arn
 
   environment_class = var.mwaa_environment_class
