@@ -16,7 +16,7 @@ module "mwaa" {
   environment_class = var.mwaa_environment_class
   min_workers       = var.mwaa_min_workers
   max_workers       = var.mwaa_max_workers
-  
+
   backend_api_endpoint = "http://${module.ecs.alb_dns_name}"
   database_secret_arn  = module.rds.database_secret_arn
 
@@ -60,7 +60,7 @@ resource "aws_ssm_parameter" "airflow_backend_endpoint" {
   name  = "/airflow/variables/backend_endpoint"
   type  = "String"
   value = "http://${module.ecs.alb_dns_name}/graphql"
-  
+
   tags = {
     Component = "Airflow"
   }
