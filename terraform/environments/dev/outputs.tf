@@ -12,17 +12,17 @@ output "database_endpoint" {
 
 output "backend_api_endpoint" {
   description = "Backend API endpoint"
-  value       = module.ecs.api_endpoint
+  value       = module.ecs.alb_dns_name
 }
 
 output "frontend_url" {
   description = "Frontend URL"
-  value       = module.s3.frontend_url
+  value       = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
 }
 
 output "mwaa_webserver_url" {
   description = "MWAA webserver URL"
-  value       = module.mwaa.webserver_url
+  value       = var.enable_mwaa ? module.mwaa[0].webserver_url : null
 }
 
 output "ecr_repository_url" {

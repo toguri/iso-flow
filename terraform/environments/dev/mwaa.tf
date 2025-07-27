@@ -17,7 +17,7 @@ module "mwaa" {
   min_workers       = var.mwaa_min_workers
   max_workers       = var.mwaa_max_workers
   
-  backend_api_endpoint = "http://${aws_lb.main.dns_name}"
+  backend_api_endpoint = "http://${module.ecs.alb_dns_name}"
   database_secret_arn  = module.rds.database_secret_arn
   
   tags = {
@@ -59,7 +59,7 @@ resource "aws_ssm_parameter" "airflow_backend_endpoint" {
   
   name  = "/airflow/variables/backend_endpoint"
   type  = "String"
-  value = "http://${aws_lb.main.dns_name}/graphql"
+  value = "http://${module.ecs.alb_dns_name}/graphql"
   
   tags = {
     Component = "Airflow"
@@ -140,10 +140,6 @@ output "mwaa_environment_name" {
   value       = var.enable_mwaa ? module.mwaa[0].environment_name : null
 }
 
-output "mwaa_webserver_url" {
-  description = "MWAA webserver URL"
-  value       = var.enable_mwaa ? module.mwaa[0].webserver_url : null
-}
 
 output "mwaa_execution_role_arn" {
   description = "MWAA execution role ARN"
