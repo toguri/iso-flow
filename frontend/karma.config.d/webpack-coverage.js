@@ -4,6 +4,9 @@ const webpackConfig = config.webpack || {};
 webpackConfig.module = webpackConfig.module || {};
 webpackConfig.module.rules = webpackConfig.module.rules || [];
 
+// ソースマップの設定を確実に有効化
+webpackConfig.devtool = 'inline-source-map';
+
 // カバレッジ測定のためのistanbul-instrumenter-loaderを追加
 // フロントエンドのソースコードのみを対象にする
 webpackConfig.module.rules.push({

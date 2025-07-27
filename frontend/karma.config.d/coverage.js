@@ -6,10 +6,9 @@ config.plugins.push('karma-coverage');
 config.reporters.push('coverage');
 
 // カバレッジ対象ファイルの設定
-// Webpackでバンドルされる前のファイルにカバレッジを適用
 config.preprocessors = config.preprocessors || {};
-config.preprocessors['kotlin/**/*.js'] = ['sourcemap', 'coverage'];
-config.preprocessors['kotlin/iso-flow-frontend.js'] = ['sourcemap', 'coverage'];
+// 既存のpreprocessorsを保持しつつ、カバレッジを追加しない
+// （Webpackでバンドルされたコードには適用しない）
 
 // カバレッジレポートの設定
 config.coverageReporter = {
@@ -22,6 +21,7 @@ config.coverageReporter = {
     // ソースファイルのパスを修正
     fixWebpackSourcePaths: true,
     skipFilesWithNoCoverage: true,
+    includeAllSources: false,  // 参照されていないファイルは含まない
     // カバレッジ対象を制限
     check: {
         global: {

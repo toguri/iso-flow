@@ -45,10 +45,25 @@ ignore:
   - "backend/tests/**/*"
   - "backend/src/bin/**/*"
   - "backend/src/main.rs"  # エントリーポイント
-  - "frontend/**/*"
   - "terraform/**/*"
   - "airflow/**/*"
   # データベース接続関連（統合テストで確認）
   - "backend/src/db/connection.rs"
   # マイグレーション関連
   - "**/migrations/**/*"
+
+# フロントエンドのパス修正
+fixes:
+  - "../../../../compileSync/js/test/testDevelopmentExecutable/kotlin/::"
+  - "::frontend/src/"
+
+# フラグ設定
+flags:
+  backend:
+    paths:
+      - backend/
+    carryforward: true
+  frontend:
+    paths:
+      - frontend/
+    carryforward: true
