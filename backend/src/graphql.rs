@@ -215,6 +215,44 @@ pub struct ScrapeResult {
 
 pub type QueryRoot = Query;
 
+pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription> {
+    Schema::build(Query, Mutation, EmptySubscription)
+        .data(pool)
+        .finish()
+}
+
+/// リポジトリを使用してGraphQLスキーマを作成（テスト用）
+#[cfg(any(test, feature = "test-utils"))]
+pub fn create_schema_with_repository(
+    repository: std::sync::Arc<dyn crate::db::repository::NewsRepository>,
+) -> Schema<Query, Mutation, EmptySubscription> {
+    Schema::build(Query, Mutation, EmptySubscription)
+        .data(repository)
+        .finish()
+}
+
+pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
+    use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+    use axum::{extract::State, response::Html, routing::get, Router};
+
+    async fn graphql_handler(
+        State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
+        req: GraphQLRequest,
+    ) -> GraphQLResponse {
+        schema.execute(req.into_inner()).await.into()
+    }
+
+    async fn graphql_playground() -> Html<String> {
+        Html(async_graphql::http::playground_source(
+            async_graphql::http::GraphQLPlaygroundConfig::new("/"),
+        ))
+    }
+
+    Router::new()
+        .route("/", get(graphql_playground).post(graphql_handler))
+        .with_state(schema)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,42 +323,4 @@ mod tests {
         assert_eq!(result.error_count, 2);
         assert_eq!(result.errors.len(), 2);
     }
-}
-
-pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription> {
-    Schema::build(Query, Mutation, EmptySubscription)
-        .data(pool)
-        .finish()
-}
-
-/// リポジトリを使用してGraphQLスキーマを作成（テスト用）
-#[cfg(any(test, feature = "test-utils"))]
-pub fn create_schema_with_repository(
-    repository: std::sync::Arc<dyn crate::db::repository::NewsRepository>,
-) -> Schema<Query, Mutation, EmptySubscription> {
-    Schema::build(Query, Mutation, EmptySubscription)
-        .data(repository)
-        .finish()
-}
-
-pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
-    use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-    use axum::{extract::State, response::Html, routing::get, Router};
-
-    async fn graphql_handler(
-        State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
-        req: GraphQLRequest,
-    ) -> GraphQLResponse {
-        schema.execute(req.into_inner()).await.into()
-    }
-
-    async fn graphql_playground() -> Html<String> {
-        Html(async_graphql::http::playground_source(
-            async_graphql::http::GraphQLPlaygroundConfig::new("/"),
-        ))
-    }
-
-    Router::new()
-        .route("/", get(graphql_playground).post(graphql_handler))
-        .with_state(schema)
 }

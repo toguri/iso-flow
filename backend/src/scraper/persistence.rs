@@ -186,6 +186,12 @@ mod tests {
     // これらのテストは統合テストとして実装すべきなので、
     // 単体テストからは削除し、モックを使った単体テストに置き換える
 
+    async fn setup_test_db() -> PgPool {
+        // 一時的にダミーの実装
+        // TODO: モック化または統合テスト環境の構築が必要
+        panic!("Test DB setup not implemented - tests are temporarily disabled");
+    }
+
     #[test]
     fn test_save_result_struct() {
         // SaveResult構造体の基本的な動作をテスト
