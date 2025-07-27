@@ -7,8 +7,12 @@ config.reporters.push('coverage');
 
 // カバレッジ対象ファイルの設定
 config.preprocessors = config.preprocessors || {};
-// 既存のpreprocessorsを保持しつつ、カバレッジを追加しない
-// （Webpackでバンドルされたコードには適用しない）
+// Webpack処理後のファイルにカバレッジを適用
+const frontendSource = 'kotlin/iso-flow-frontend.js';
+if (!config.preprocessors[frontendSource]) {
+    config.preprocessors[frontendSource] = [];
+}
+config.preprocessors[frontendSource].push('coverage');
 
 // カバレッジレポートの設定
 config.coverageReporter = {

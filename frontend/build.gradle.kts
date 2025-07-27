@@ -47,6 +47,7 @@ kotlin {
                 
                 // カバレッジツール
                 implementation(npm("karma-coverage", "2.2.1"))
+                implementation(npm("karma-coverage-istanbul-reporter", "3.0.3"))
                 implementation(npm("istanbul-instrumenter-loader", "3.0.1"))
             }
         }

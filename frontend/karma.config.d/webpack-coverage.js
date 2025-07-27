@@ -7,8 +7,11 @@ webpackConfig.module.rules = webpackConfig.module.rules || [];
 // ソースマップの設定を確実に有効化
 webpackConfig.devtool = 'inline-source-map';
 
-// カバレッジ測定のためのistanbul-instrumenter-loaderを追加
-// フロントエンドのソースコードのみを対象にする
+// istanbul-instrumenter-loaderの設定
+// Kotlin/JSで生成されたコードのうち、プロジェクトのコードを含む部分を対象にする
+const projectRoot = path.resolve(__dirname, '../../..');
+const frontendPackage = path.join(projectRoot, 'build/js/packages/iso-flow-frontend/kotlin');
+
 webpackConfig.module.rules.push({
     test: /\.js$/,
     use: {
@@ -19,15 +22,12 @@ webpackConfig.module.rules.push({
         }
     },
     include: [
-        // メインのソースコードのみを対象
-        path.resolve(__dirname, '../../../build/js/packages/iso-flow-frontend/kotlin/iso-flow-frontend.js')
+        frontendPackage
     ],
     exclude: [
         /node_modules/,
-        /test/,
-        /kotlin-kotlin-stdlib/,
-        /kotlinx/,
-        /common/
+        /webpack/,
+        /test/
     ],
     enforce: 'post'
 });
