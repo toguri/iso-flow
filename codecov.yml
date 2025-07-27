@@ -53,9 +53,10 @@ ignore:
   - "**/migrations/**/*"
 
 # フロントエンドのパス修正
+# 現在はダミーカバレッジを使用しているため、実際にはこのfixは使われていない
+# もし将来的に実際のカバレッジ測定を行う場合のために残しておく
 fixes:
-  - "../../../../compileSync/js/test/testDevelopmentExecutable/kotlin/::"
-  - "::frontend/src/"
+  - "../../../../compileSync/js/test/testDevelopmentExecutable/kotlin/::frontend/build/compileSync/js/test/testDevelopmentExecutable/kotlin/"
 
 # フラグ設定
 flags:
