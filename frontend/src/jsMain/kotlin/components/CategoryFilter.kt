@@ -12,14 +12,9 @@ fun CategoryFilter(
 ) {
     val categories = listOf(
         null to "すべて",
-        "TECHNOLOGY" to "テクノロジー",
-        "PROGRAMMING" to "プログラミング",
-        "AI" to "AI・機械学習",
-        "WEB" to "Web開発",
-        "MOBILE" to "モバイル",
-        "SECURITY" to "セキュリティ",
-        "CLOUD" to "クラウド",
-        "DATA" to "データサイエンス"
+        "Trade" to "トレード",
+        "Signing" to "契約・サイン",
+        "Other" to "その他"
     )
     
     Div(attrs = {
@@ -65,7 +60,7 @@ object CategoryFilterStyles : StyleSheet() {
             padding(1.em)
             backgroundColor(Color.white)
             borderRadius(8.px)
-            boxShadow("0 2px 4px rgba(0,0,0,0.1)")
+            property("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
         }
         
         ".category-label" style {
@@ -74,9 +69,9 @@ object CategoryFilterStyles : StyleSheet() {
         }
         
         ".category-select" style {
-            padding("0.5em 1em")
+            padding(0.5.em, 1.em)
             fontSize(1.em)
-            border("2px solid #ddd")
+            property("border", "2px solid #ddd")
             borderRadius(4.px)
             backgroundColor(Color.white)
             cursor("pointer")
@@ -85,13 +80,13 @@ object CategoryFilterStyles : StyleSheet() {
         }
         
         ".category-select:hover" style {
-            borderColor(Color("#1976d2"))
+            property("border-color", "#1976d2")
         }
         
         ".category-select:focus" style {
             outline("none")
-            borderColor(Color("#1976d2"))
-            boxShadow("0 0 0 3px rgba(25, 118, 210, 0.1)")
+            property("border-color", "#1976d2")
+            property("box-shadow", "0 0 0 3px rgba(25, 118, 210, 0.1)")
         }
         
         media("(max-width: 600px)") {

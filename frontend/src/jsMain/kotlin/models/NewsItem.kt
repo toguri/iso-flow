@@ -6,11 +6,9 @@ import kotlinx.serialization.Serializable
 data class NewsItem(
     val id: String,
     val title: String,
-    val description: String,
+    val description: String? = null,
     val link: String,
-    val pubDate: String,
-    val category: String,
-    val sourceUrl: String,
-    val createdAt: String,
-    val updatedAt: String
+    val source: String,
+    val publishedAt: String,
+    val category: String
 )

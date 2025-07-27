@@ -17,12 +17,12 @@ fun App() {
             classes("app-header")
         }) {
             H1 {
-                Text("ISO-Flow Tech News")
+                Text("NBA Trade Tracker")
             }
             P(attrs = {
                 classes("app-subtitle")
             }) {
-                Text("最新のテクノロジーニュースをお届けします")
+                Text("NBAの最新トレード情報をリアルタイムでお届け")
             }
         }
         
@@ -41,7 +41,7 @@ fun App() {
             classes("app-footer")
         }) {
             P {
-                Text("© 2023 ISO-Flow Tech News. All rights reserved.")
+                Text("© 2025 NBA Trade Tracker. All rights reserved.")
             }
         }
     }
@@ -59,7 +59,7 @@ object AppStylesheet : StyleSheet() {
             fontFamily("'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif")
             backgroundColor(Color("#f5f5f5"))
             color(Color("#333"))
-            lineHeight(1.6)
+            lineHeight(1.6.cssRem)
         }
         
         ".app-container" style {
@@ -73,7 +73,7 @@ object AppStylesheet : StyleSheet() {
             color(Color.white)
             padding(2.em)
             textAlign("center")
-            boxShadow("0 2px 4px rgba(0,0,0,0.1)")
+            property("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
         }
         
         ".app-header h1" style {
@@ -92,7 +92,7 @@ object AppStylesheet : StyleSheet() {
             padding(2.em)
             maxWidth(1200.px)
             width(100.percent)
-            margin("0 auto")
+            property("margin", "0 auto")
         }
         
         ".app-footer" style {
@@ -100,7 +100,7 @@ object AppStylesheet : StyleSheet() {
             color(Color.white)
             padding(1.5.em)
             textAlign("center")
-            marginTop("auto")
+            property("margin-top", "auto")
         }
         
         ".app-footer p" style {

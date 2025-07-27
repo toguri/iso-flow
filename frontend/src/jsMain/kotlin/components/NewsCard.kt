@@ -18,7 +18,7 @@ fun NewsCard(newsItem: NewsItem) {
                 classes("news-card-title")
             }) {
                 A(href = newsItem.link, attrs = {
-                    target(ATarget.Blank)
+                    attr("target", "_blank")
                     attr("rel", "noopener noreferrer")
                 }) {
                     Text(newsItem.title)
@@ -31,10 +31,12 @@ fun NewsCard(newsItem: NewsItem) {
             }
         }
         
-        P(attrs = {
-            classes("news-card-description")
-        }) {
-            Text(newsItem.description)
+        newsItem.description?.let { desc ->
+            P(attrs = {
+                classes("news-card-description")
+            }) {
+                Text(desc)
+            }
         }
         
         Div(attrs = {
@@ -43,12 +45,12 @@ fun NewsCard(newsItem: NewsItem) {
             Span(attrs = {
                 classes("news-card-date")
             }) {
-                Text(formatDate(newsItem.pubDate))
+                Text(formatDate(newsItem.publishedAt))
             }
             Span(attrs = {
                 classes("news-card-source")
             }) {
-                Text("Source: ${extractDomain(newsItem.sourceUrl)}")
+                Text("Source: ${newsItem.source}")
             }
         }
     }
@@ -83,12 +85,12 @@ object NewsCardStyles : StyleSheet() {
             borderRadius(8.px)
             padding(1.5.em)
             marginBottom(1.5.em)
-            boxShadow("0 2px 4px rgba(0,0,0,0.1)")
+            property("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
             property("transition", "box-shadow 0.3s ease")
         }
         
         ".news-card:hover" style {
-            boxShadow("0 4px 8px rgba(0,0,0,0.15)")
+            property("box-shadow", "0 4px 8px rgba(0,0,0,0.15)")
         }
         
         ".news-card-header" style {
@@ -102,7 +104,7 @@ object NewsCardStyles : StyleSheet() {
             flex(1)
             marginRight(1.em)
             fontSize(1.3.em)
-            lineHeight(1.4)
+            lineHeight(1.4.cssRem)
         }
         
         ".news-card-title a" style {
@@ -117,57 +119,32 @@ object NewsCardStyles : StyleSheet() {
         }
         
         ".news-card-category" style {
-            padding("0.3em 0.8em")
+            padding(0.3.em, 0.8.em)
             borderRadius(4.px)
             fontSize(0.85.em)
             fontWeight(600)
-            textTransform("uppercase")
+            property("text-transform", "uppercase")
             whiteSpace("nowrap")
         }
         
-        ".category-technology" style {
+        ".category-trade" style {
             backgroundColor(Color("#e3f2fd"))
             color(Color("#1565c0"))
         }
         
-        ".category-programming" style {
+        ".category-signing" style {
             backgroundColor(Color("#f3e5f5"))
             color(Color("#6a1b9a"))
         }
         
-        ".category-ai" style {
-            backgroundColor(Color("#e8f5e9"))
-            color(Color("#2e7d32"))
-        }
-        
-        ".category-web" style {
-            backgroundColor(Color("#fff3e0"))
-            color(Color("#e65100"))
-        }
-        
-        ".category-mobile" style {
-            backgroundColor(Color("#fce4ec"))
-            color(Color("#c2185b"))
-        }
-        
-        ".category-security" style {
-            backgroundColor(Color("#ffebee"))
-            color(Color("#c62828"))
-        }
-        
-        ".category-cloud" style {
-            backgroundColor(Color("#e0f2f1"))
-            color(Color("#00695c"))
-        }
-        
-        ".category-data" style {
-            backgroundColor(Color("#f1f8e9"))
-            color(Color("#558b2f"))
+        ".category-other" style {
+            backgroundColor(Color("#e8e8e8"))
+            color(Color("#555555"))
         }
         
         ".news-card-description" style {
             color(Color("#666"))
-            lineHeight(1.6)
+            lineHeight(1.6.cssRem)
             marginBottom(1.em)
         }
         

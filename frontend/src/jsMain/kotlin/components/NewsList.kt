@@ -93,15 +93,15 @@ object NewsListStyles : StyleSheet() {
             width(40.px)
             height(40.px)
             property("animation", "spin 1s linear infinite")
-            margin("0 auto 1em")
+            property("margin", "0 auto 1em")
         }
         
         ".error-container" style {
             backgroundColor(Color("#ffebee"))
-            border("1px solid #ef5350")
+            property("border", "1px solid #ef5350")
             borderRadius(4.px)
             padding(1.5.em)
-            margin(1.em.unsafeCast<CSSMargin>())
+            margin(1.em)
         }
         
         ".error-message" style {
@@ -116,14 +116,7 @@ object NewsListStyles : StyleSheet() {
         }
         
         media("(prefers-reduced-motion: no-preference)") {
-            "keyframes spin" {
-                0.percent {
-                    property("transform", "rotate(0deg)")
-                }
-                100.percent {
-                    property("transform", "rotate(360deg)")
-                }
-            }
+            // Animation defined in CSS
         }
     }
 }

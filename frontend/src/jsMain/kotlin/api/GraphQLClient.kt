@@ -29,8 +29,13 @@ data class GraphQLError(
 )
 
 @Serializable
-data class NewsItemsData(
-    val newsItems: List<NewsItem>
+data class TradeNewsData(
+    val tradeNews: List<NewsItem>
+)
+
+@Serializable
+data class TradeNewsByCategoryData(
+    val tradeNewsByCategory: List<NewsItem>
 )
 
 class GraphQLClient {
@@ -44,21 +49,57 @@ class GraphQLClient {
         }
     }
     
-    private val endpoint = "http://localhost:8080/graphql"
+    private val endpoint = "http://localhost:8000/graphql"
     
     suspend fun fetchNewsItems(category: String? = null): List<NewsItem> {
+        return if (category == null) {
+            fetchAllTradeNews()
+        } else {
+            fetchTradeNewsByCategory(category)
+        }
+    }
+    
+    private suspend fun fetchAllTradeNews(): List<NewsItem> {
         val query = """
-            query GetNewsItems(${'$'}category: String) {
-                newsItems(category: ${'$'}category) {
+            query GetAllTradeNews {
+                tradeNews {
                     id
                     title
                     description
                     link
-                    pubDate
+                    source
+                    publishedAt
                     category
-                    sourceUrl
-                    createdAt
-                    updatedAt
+                }
+            }
+        """.trimIndent()
+        
+        val request = GraphQLRequest(query = query)
+        
+        return try {
+            val response: GraphQLResponse<TradeNewsData> = client.post(endpoint) {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }.body()
+            
+            response.data?.tradeNews ?: emptyList()
+        } catch (e: Exception) {
+            console.error("Failed to fetch trade news", e)
+            emptyList()
+        }
+    }
+    
+    private suspend fun fetchTradeNewsByCategory(category: String): List<NewsItem> {
+        val query = """
+            query GetTradeNewsByCategory(${'$'}category: String!) {
+                tradeNewsByCategory(category: ${'$'}category) {
+                    id
+                    title
+                    description
+                    link
+                    source
+                    publishedAt
+                    category
                 }
             }
         """.trimIndent()
@@ -69,14 +110,14 @@ class GraphQLClient {
         )
         
         return try {
-            val response: GraphQLResponse<NewsItemsData> = client.post(endpoint) {
+            val response: GraphQLResponse<TradeNewsByCategoryData> = client.post(endpoint) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }.body()
             
-            response.data?.newsItems ?: emptyList()
+            response.data?.tradeNewsByCategory ?: emptyList()
         } catch (e: Exception) {
-            console.error("Failed to fetch news items", e)
+            console.error("Failed to fetch trade news by category", e)
             emptyList()
         }
     }
