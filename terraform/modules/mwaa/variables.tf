@@ -18,10 +18,6 @@ variable "private_subnets" {
   type        = list(string)
 }
 
-variable "dag_s3_bucket" {
-  description = "S3 bucket name for DAGs"
-  type        = string
-}
 
 variable "dag_s3_bucket_arn" {
   description = "S3 bucket ARN for DAGs"

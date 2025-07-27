@@ -1,5 +1,16 @@
 # VPC Module for ISO-Flow
 
+terraform {
+  required_version = ">= 1.5.0"
+  
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 locals {
   az_count = min(length(var.availability_zones), 3)
 }
