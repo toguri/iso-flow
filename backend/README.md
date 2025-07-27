@@ -111,15 +111,19 @@ make test-integration
 
 ### カバレッジ測定
 ```bash
-# cargo-llvm-covのインストール（初回のみ）
-cargo install cargo-llvm-cov
+# cargo-tarpaulinのインストール（初回のみ）
+cargo install cargo-tarpaulin
 
 # カバレッジ測定（テキスト形式）
 make coverage
 
 # カバレッジ測定（HTML形式）
 make coverage-html
-# レポートは target/llvm-cov/html/index.html に生成されます
+# レポートは tarpaulin-report.html に生成されます
+
+# カバレッジ測定（XML形式 - Codecov用）
+make coverage-xml
+# レポートは cobertura.xml に生成されます
 ```
 
 ## ドキュメント

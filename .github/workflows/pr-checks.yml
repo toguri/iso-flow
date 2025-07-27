@@ -237,6 +237,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [analyze-pr, common-checks]
     if: needs.analyze-pr.outputs.skip_coverage != 'true'
+    env:
+      SQLX_OFFLINE: true
     defaults:
       run:
         working-directory: backend
@@ -246,18 +248,30 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache tarpaulin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-tarpaulin-0.27.3
+
       - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin
+        run: |
+          if ! command -v cargo-tarpaulin &> /dev/null; then
+            cargo install cargo-tarpaulin --version 0.27.3
+          fi
 
       - name: Generate coverage report
-        run: cargo tarpaulin --out xml
+        run: |
+          echo "🧪 Running tests with coverage..."
+          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: ./backend/cobertura.xml
           flags: backend
-          fail_ci_if_error: false
+          fail_ci_if_error: true
+          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # ステップ6.5: Codecovダミーステータス（スキップ時用）

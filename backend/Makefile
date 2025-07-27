@@ -14,16 +14,22 @@ test-integration:
 
 # カバレッジ測定（テキスト形式）
 coverage:
-	cargo llvm-cov test --all-features --workspace
+	cargo tarpaulin --out Stdout --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
 
 # カバレッジ測定（HTML形式）
 coverage-html:
-	cargo llvm-cov test --all-features --workspace --html
-	@echo "カバレッジレポートが生成されました: target/llvm-cov/html/index.html"
+	cargo tarpaulin --out Html --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
+	@echo "カバレッジレポートが生成されました: tarpaulin-report.html"
+
+# カバレッジ測定（XML形式 - Codecov用）
+coverage-xml:
+	cargo tarpaulin --out Xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
+	@echo "カバレッジレポートが生成されました: cobertura.xml"
 
 # カバレッジデータのクリーンアップ
 clean:
-	cargo llvm-cov clean --workspace
+	rm -f tarpaulin-report.html cobertura.xml
+	cargo clean
 
 # ドキュメント生成
 docs:

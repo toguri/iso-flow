@@ -26,8 +26,6 @@ jobs:
     
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
     
     - name: Cache cargo dependencies
       uses: actions/cache@v4
@@ -43,26 +41,32 @@ jobs:
           ${{ runner.os }}-cargo-coverage-
           ${{ runner.os }}-cargo-
     
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
+    - name: Cache tarpaulin
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/cargo-tarpaulin
+        key: ${{ runner.os }}-tarpaulin-0.27.3
     
-    - name: Setup test database
+    - name: Install tarpaulin
       run: |
-        echo "DATABASE_URL=sqlite::memory:" > .env
+        if ! command -v cargo-tarpaulin &> /dev/null; then
+          cargo install cargo-tarpaulin --version 0.27.3
+        fi
     
     - name: Generate coverage report
       run: |
-        cargo llvm-cov clean --workspace
-        cargo llvm-cov test --all-features --workspace --lcov --output-path lcov.info
-        cargo llvm-cov report --text
+        echo "🧪 Running tests with coverage..."
+        cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
+        cargo tarpaulin --print-summary
     
     - name: Upload coverage to Codecov
       if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
       uses: codecov/codecov-action@v4
       with:
-        files: backend/lcov.info
+        file: ./backend/cobertura.xml
         flags: backend
-        fail_ci_if_error: false
+        fail_ci_if_error: true
+        verbose: true
         token: ${{ secrets.CODECOV_TOKEN }}
     
     - name: Upload coverage artifacts
@@ -70,13 +74,12 @@ jobs:
       with:
         name: coverage-report
         path: |
-          backend/lcov.info
-          backend/target/llvm-cov/html/
+          backend/cobertura.xml
         retention-days: 7
     
     - name: Generate coverage summary
       run: |
         echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        cargo llvm-cov report >> $GITHUB_STEP_SUMMARY
+        cargo tarpaulin --print-summary >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
