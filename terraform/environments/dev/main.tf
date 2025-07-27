@@ -185,20 +185,8 @@ resource "aws_cloudwatch_log_group" "ecs" {
 }
 
 # Outputs
-output "vpc_id" {
-  value = module.vpc.vpc_id
-}
-
-# Note: ALB output has been moved to ecs.tf
-
-# Note: RDS outputs have been moved to rds.tf
-
 output "frontend_bucket" {
   value = aws_s3_bucket.frontend.id
-}
-
-output "frontend_url" {
-  value = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
 }
 
 output "mwaa_bucket" {
