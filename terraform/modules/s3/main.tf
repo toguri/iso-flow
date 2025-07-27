@@ -45,11 +45,11 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "PublicReadGetObject"
-        Effect = "Allow"
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
         Principal = "*"
-        Action = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
       }
     ]
   })
@@ -70,7 +70,7 @@ resource "aws_s3_bucket" "mwaa_dags" {
 # S3 Bucket Versioning for MWAA
 resource "aws_s3_bucket_versioning" "mwaa_dags" {
   bucket = aws_s3_bucket.mwaa_dags.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }

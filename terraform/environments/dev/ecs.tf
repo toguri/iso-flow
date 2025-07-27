@@ -5,19 +5,19 @@ module "ecs" {
 
   project_name = var.project_name
   environment  = var.environment
-  
+
   vpc_id          = module.vpc.vpc_id
   private_subnets = module.vpc.private_subnet_ids
   public_subnets  = module.vpc.public_subnet_ids
-  
+
   # Database connection
   database_url        = "postgresql://${var.database_username}:${var.database_password}@${module.rds.rds_endpoint}/${var.database_name}?sslmode=require"
   database_secret_arn = module.rds.db_secret_arn
-  
+
   # Task configuration
   task_cpu    = var.ecs_task_cpu
   task_memory = var.ecs_task_memory
-  
+
   tags = local.common_tags
 }
 

@@ -1,16 +1,16 @@
 # RDS Aurora Serverless v2 Module
 module "rds" {
   source = "../../modules/rds"
-  
+
   project_name     = var.project_name
   environment      = var.environment
   vpc_id           = module.vpc.vpc_id
   database_subnets = module.vpc.database_subnet_ids
-  
+
   db_name     = var.database_name
   db_username = var.database_username
   db_password = var.database_password
-  
+
   tags = {
     Component = "Database"
   }
@@ -29,7 +29,7 @@ resource "aws_security_group_rule" "ecs_to_rds" {
 # Security Group Rule to allow MWAA to connect to RDS
 resource "aws_security_group_rule" "mwaa_to_rds" {
   count = var.enable_mwaa ? 1 : 0
-  
+
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
@@ -43,7 +43,7 @@ resource "aws_ssm_parameter" "database_url" {
   name  = "/${var.project_name}/${var.environment}/database_url"
   type  = "SecureString"
   value = module.rds.database_url
-  
+
   tags = {
     Component = "Database"
   }

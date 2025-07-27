@@ -139,13 +139,13 @@ resource "aws_iam_role_policy_attachment" "mwaa_execution" {
 
 # MWAA Environment
 resource "aws_mwaa_environment" "main" {
-  name              = local.name
-  airflow_version   = "2.8.1"
-  environment_class = var.environment_class
+  name               = local.name
+  airflow_version    = "2.8.1"
+  environment_class  = var.environment_class
   execution_role_arn = aws_iam_role.mwaa_execution.arn
 
-  source_bucket_arn = var.dag_s3_bucket_arn
-  dag_s3_path       = "dags/"
+  source_bucket_arn    = var.dag_s3_bucket_arn
+  dag_s3_path          = "dags/"
   requirements_s3_path = "requirements.txt"
 
   min_workers = var.min_workers
@@ -184,9 +184,9 @@ resource "aws_mwaa_environment" "main" {
   }
 
   airflow_configuration_options = {
-    "core.default_timezone" = "Asia/Tokyo"
+    "core.default_timezone"   = "Asia/Tokyo"
     "webserver.expose_config" = "true"
-    "core.load_examples" = "false"
+    "core.load_examples"      = "false"
   }
 
   tags = merge(var.tags, {
@@ -204,8 +204,8 @@ resource "aws_ssm_parameter" "backend_api_endpoint" {
 }
 
 resource "aws_ssm_parameter" "aurora_connection" {
-  name  = "/mwaa/${local.name}/connections/aurora_postgres"
-  type  = "SecureString"
+  name = "/mwaa/${local.name}/connections/aurora_postgres"
+  type = "SecureString"
   value = jsonencode({
     conn_type = "postgres"
     host      = split(":", replace(var.backend_api_endpoint, "http://", ""))[0]

@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -11,7 +11,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Environment = var.environment
@@ -31,9 +31,9 @@ data "aws_caller_identity" "current" {}
 # VPC Module
 module "vpc" {
   source = "../../modules/vpc"
-  
-  project_name        = var.project_name
-  environment         = var.environment
+
+  project_name       = var.project_name
+  environment        = var.environment
   vpc_cidr           = var.vpc_cidr
   availability_zones = data.aws_availability_zones.available.names
 }
@@ -48,7 +48,7 @@ resource "aws_s3_bucket" "frontend" {
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
   bucket = aws_s3_bucket.frontend.id
-  
+
   block_public_acls       = false
   block_public_policy     = false
   ignore_public_acls      = false
@@ -57,11 +57,11 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 
 resource "aws_s3_bucket_website_configuration" "frontend" {
   bucket = aws_s3_bucket.frontend.id
-  
+
   index_document {
     suffix = "index.html"
   }
-  
+
   error_document {
     key = "error.html"
   }
@@ -69,16 +69,16 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
 
 resource "aws_s3_bucket_policy" "frontend" {
   bucket = aws_s3_bucket.frontend.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "PublicReadGetObject"
-        Effect = "Allow"
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
         Principal = "*"
-        Action = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.frontend.arn}/*"
       }
     ]
   })
@@ -90,7 +90,7 @@ resource "aws_s3_bucket" "mwaa" {
 
 resource "aws_s3_bucket_public_access_block" "mwaa" {
   bucket = aws_s3_bucket.mwaa.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -99,7 +99,7 @@ resource "aws_s3_bucket_public_access_block" "mwaa" {
 
 resource "aws_s3_bucket_versioning" "mwaa" {
   bucket = aws_s3_bucket.mwaa.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -111,7 +111,7 @@ resource "aws_s3_bucket" "alb_logs" {
 
 resource "aws_s3_bucket_public_access_block" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -120,7 +120,7 @@ resource "aws_s3_bucket_public_access_block" "alb_logs" {
 
 resource "aws_s3_bucket_policy" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -141,7 +141,7 @@ data "aws_elb_service_account" "main" {}
 # IAM Roles for ECS
 resource "aws_iam_role" "ecs_task_execution" {
   name_prefix = "${var.project_name}-${var.environment}-ecs-task-exec-"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -163,7 +163,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
 
 resource "aws_iam_role" "ecs_task" {
   name_prefix = "${var.project_name}-${var.environment}-ecs-task-"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
