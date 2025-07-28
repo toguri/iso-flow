@@ -1,5 +1,1 @@
-mod integration {
-    mod db_test;
-    mod persistence_test;
-    mod simple_repository_test;
-}
+// Integration tests are now in src/ files as #[cfg(test)] modules

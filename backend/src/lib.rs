@@ -50,7 +50,6 @@ pub mod scheduler;
 /// ユーティリティ関数
 pub mod utils;
 
-
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{routing::get, Router};
@@ -129,6 +128,6 @@ mod tests {
             .allow_headers(Any);
 
         // CORSレイヤーの設定を確認（インスタンス化できることを確認）
-        assert!(true);
+        // Test passes
     }
 }

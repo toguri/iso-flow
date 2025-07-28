@@ -131,8 +131,6 @@ mod tests {
     fn test_get_database_type_returns_postgres() {
         // get_database_type関数は常に"postgres"を返すことを確認
         // 実際のPgPoolを作成する必要はないので、型レベルでテスト
-        use std::marker::PhantomData;
-        
         // 関数が常に"postgres"を返すことを確認
         // (実際のプールは不要なので、ポインタを使わない)
         let db_type = "postgres";

@@ -176,9 +176,10 @@ mod tests {
     use sqlx::postgres::PgPool;
 
     async fn setup_test_db() -> Option<PgPool> {
-        let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string());
-        
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+
         match PgPool::connect(&database_url).await {
             Ok(pool) => Some(pool),
             Err(_) => {
@@ -224,24 +225,27 @@ mod tests {
 
     #[tokio::test]
     async fn test_save_news_items() {
-        let Some(pool) = setup_test_db().await else { return; };
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
         let persistence = NewsPersistence::new(pool.clone());
-        
-        let news_items = vec![
-            NewsItem {
-                id: format!("persist-test-{}", Utc::now().timestamp_nanos_opt().unwrap()),
-                title: "Persistence Test".to_string(),
-                description: None,
-                link: "https://example.com/persist".to_string(),
-                source: NewsSource::RealGM,
-                published_at: Utc::now(),
-                category: "Signing".to_string(),
-            }
-        ];
-        
-        let result = persistence.save_news_items(news_items.clone()).await.unwrap();
+
+        let news_items = vec![NewsItem {
+            id: format!("persist-test-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            title: "Persistence Test".to_string(),
+            description: None,
+            link: "https://example.com/persist".to_string(),
+            source: NewsSource::RealGM,
+            published_at: Utc::now(),
+            category: "Signing".to_string(),
+        }];
+
+        let result = persistence
+            .save_news_items(news_items.clone())
+            .await
+            .unwrap();
         assert!(result.saved_count > 0 || result.skipped_count > 0);
-        
+
         sqlx::query("DELETE FROM trade_news WHERE id = $1")
             .bind(&news_items[0].id)
             .execute(&pool)
@@ -251,11 +255,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_skip_existing_news() {
-        let Some(pool) = setup_test_db().await else { return; };
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         let news_item = NewsItem {
-            id: format!("duplicate-test-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            id: format!(
+                "duplicate-test-{}",
+                Utc::now().timestamp_nanos_opt().unwrap()
+            ),
             title: "Duplicate Test".to_string(),
             description: Some("This will be saved twice".to_string()),
             link: "https://example.com/duplicate".to_string(),
@@ -263,17 +272,23 @@ mod tests {
             published_at: Utc::now(),
             category: "Trade".to_string(),
         };
-        
+
         // 1回目の保存
-        let result1 = persistence.save_news_items(vec![news_item.clone()]).await.unwrap();
+        let result1 = persistence
+            .save_news_items(vec![news_item.clone()])
+            .await
+            .unwrap();
         assert_eq!(result1.saved_count, 1);
         assert_eq!(result1.skipped_count, 0);
-        
+
         // 2回目の保存（スキップされるはず）
-        let result2 = persistence.save_news_items(vec![news_item.clone()]).await.unwrap();
+        let result2 = persistence
+            .save_news_items(vec![news_item.clone()])
+            .await
+            .unwrap();
         assert_eq!(result2.saved_count, 0);
         assert_eq!(result2.skipped_count, 1);
-        
+
         sqlx::query("DELETE FROM trade_news WHERE id = $1")
             .bind(&news_item.id)
             .execute(&pool)
@@ -283,11 +298,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_recent_news() {
-        let Some(pool) = setup_test_db().await else { return; };
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         let news_item = NewsItem {
-            id: format!("recent-persist-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            id: format!(
+                "recent-persist-{}",
+                Utc::now().timestamp_nanos_opt().unwrap()
+            ),
             title: "Recent News Test".to_string(),
             description: None,
             link: "https://example.com/recent".to_string(),
@@ -295,12 +315,15 @@ mod tests {
             published_at: Utc::now(),
             category: "Other".to_string(),
         };
-        
-        persistence.save_news_items(vec![news_item.clone()]).await.unwrap();
-        
+
+        persistence
+            .save_news_items(vec![news_item.clone()])
+            .await
+            .unwrap();
+
         let recent = persistence.get_recent_news(10).await.unwrap();
         assert!(recent.iter().any(|item| item.id == news_item.id));
-        
+
         sqlx::query("DELETE FROM trade_news WHERE id = $1")
             .bind(&news_item.id)
             .execute(&pool)
@@ -310,11 +333,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_news_by_category() {
-        let Some(pool) = setup_test_db().await else { return; };
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
         let persistence = NewsPersistence::new(pool.clone());
-        
+
         let news_item = NewsItem {
-            id: format!("category-persist-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            id: format!(
+                "category-persist-{}",
+                Utc::now().timestamp_nanos_opt().unwrap()
+            ),
             title: "Category Test".to_string(),
             description: None,
             link: "https://example.com/category".to_string(),
@@ -322,12 +350,15 @@ mod tests {
             published_at: Utc::now(),
             category: "Trade".to_string(),
         };
-        
-        persistence.save_news_items(vec![news_item.clone()]).await.unwrap();
-        
+
+        persistence
+            .save_news_items(vec![news_item.clone()])
+            .await
+            .unwrap();
+
         let trade_news = persistence.get_news_by_category("Trade").await.unwrap();
         assert!(trade_news.iter().any(|item| item.id == news_item.id));
-        
+
         sqlx::query("DELETE FROM trade_news WHERE id = $1")
             .bind(&news_item.id)
             .execute(&pool)

@@ -206,7 +206,6 @@ pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription>
         .finish()
 }
 
-
 pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
     use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
     use axum::{extract::State, response::Html, routing::get, Router};
@@ -238,7 +237,7 @@ mod tests {
     #[test]
     fn test_trade_news_from_news_item() {
         let published_at = Utc::now();
-        
+
         // NewsItemを作成
         let news_item = NewsItem {
             id: "test-123".to_string(),
@@ -252,11 +251,14 @@ mod tests {
         
         // TradeNewsに変換
         let trade_news = TradeNews::from(news_item.clone());
-        
+
         // 全フィールドが正しく変換されていることを確認
         assert_eq!(trade_news.id, "test-123");
         assert_eq!(trade_news.title, "Lakers Trade Update");
-        assert_eq!(trade_news.description, Some("Lakers are trading...".to_string()));
+        assert_eq!(
+            trade_news.description,
+            Some("Lakers are trading...".to_string())
+        );
         assert_eq!(trade_news.link, "https://example.com/news/123");
         assert_eq!(trade_news.source, "ESPN");
         assert_eq!(trade_news.category, "Trade");
@@ -266,7 +268,7 @@ mod tests {
     #[test]
     fn test_trade_news_from_news_item_without_description() {
         let published_at = Utc::now();
-        
+
         // descriptionがないNewsItemを作成
         let news_item = NewsItem {
             id: "test-456".to_string(),
@@ -280,7 +282,7 @@ mod tests {
         
         // TradeNewsに変換
         let trade_news = TradeNews::from(news_item);
-        
+
         // descriptionがNoneであることを確認
         assert_eq!(trade_news.id, "test-456");
         assert_eq!(trade_news.title, "Celtics Signing");
