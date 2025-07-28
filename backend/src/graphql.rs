@@ -233,6 +233,76 @@ mod tests {
     use super::*;
     use crate::scraper::{NewsItem, NewsSource};
     use chrono::Utc;
+    use crate::db::connection::create_pool;
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_query_resolver_all_trade_news() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        let query = QueryRoot { pool: pool.clone() };
+        let result = query.all_trade_news().await;
+        assert!(result.is_ok(), "Should retrieve all trade news");
+
+        std::env::remove_var("DATABASE_URL");
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_query_resolver_trade_news_by_category() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        let query = QueryRoot { pool: pool.clone() };
+        let result = query.trade_news_by_category("Trade".to_string()).await;
+        assert!(result.is_ok(), "Should retrieve trade news by category");
+
+        std::env::remove_var("DATABASE_URL");
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_query_resolver_trade_news_by_source() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        let query = QueryRoot { pool: pool.clone() };
+        let result = query.trade_news_by_source("ESPN".to_string()).await;
+        assert!(result.is_ok(), "Should retrieve trade news by source");
+
+        std::env::remove_var("DATABASE_URL");
+    }
 
     #[test]
     fn test_trade_news_from_news_item() {
@@ -331,5 +401,33 @@ mod tests {
         assert_eq!(result.errors.len(), 2);
         assert_eq!(result.errors[0], "item1: Network error");
         assert_eq!(result.errors[1], "item2: Parse error");
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_mutation_resolver_scrape_all_feeds() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        let mutation = MutationRoot { pool: pool.clone() };
+        let result = mutation.scrape_all_feeds().await;
+        assert!(result.is_ok(), "Should scrape all feeds");
+
+        if let Ok(scrape_result) = result {
+            assert!(scrape_result.saved_count >= 0);
+            assert!(scrape_result.skipped_count >= 0);
+        }
+
+        std::env::remove_var("DATABASE_URL");
     }
 }

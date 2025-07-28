@@ -365,4 +365,70 @@ mod tests {
             .await
             .unwrap();
     }
+
+    #[tokio::test]
+    async fn test_save_single_item_error_handling() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        // 不正なデータを作成（IDが空文字列）
+        let invalid_item = NewsItem {
+            id: "".to_string(),
+            title: "Invalid Item".to_string(),
+            description: None,
+            link: "https://example.com/invalid".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        // 保存は失敗するはず
+        let result = persistence.save_single_item(&invalid_item).await;
+        assert!(result.is_err(), "Should fail with empty ID");
+    }
+
+    #[tokio::test]
+    async fn test_save_news_items_partial_failure() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        let valid_item = NewsItem {
+            id: format!("partial-valid-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            title: "Valid Item".to_string(),
+            description: None,
+            link: "https://example.com/partial-valid".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        let invalid_item = NewsItem {
+            id: "".to_string(),
+            title: "Invalid Item".to_string(),
+            description: None,
+            link: "https://example.com/partial-invalid".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        let items = vec![valid_item.clone(), invalid_item];
+        let result = persistence.save_news_items(items).await.unwrap();
+
+        // 1つは成功、1つは失敗するはず
+        assert_eq!(result.saved_count, 1);
+        assert_eq!(result.skipped_count, 0);
+        assert_eq!(result.errors.len(), 1);
+
+        // Clean up
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&valid_item.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
 }

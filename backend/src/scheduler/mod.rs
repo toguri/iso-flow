@@ -116,6 +116,30 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_create_rss_scraper_job() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+
+        let pool = match sqlx::postgres::PgPool::connect(&database_url).await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        let result = super::create_scheduler(pool).await;
+        assert!(result.is_ok(), "Should create RSS scraper job");
+
+        if let Ok(mut scheduler) = result {
+            // スケジューラーをシャットダウン
+            scheduler.shutdown().await.unwrap();
+        }
+    }
+
     #[test]
     fn test_job_duration_calculation() {
         // 時間計算のロジックをテスト

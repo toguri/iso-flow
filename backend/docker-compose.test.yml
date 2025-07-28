@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  postgres-test:
+  test-db:
     image: postgres:16-alpine
     container_name: iso-flow-test-db
     environment:
@@ -12,10 +12,10 @@ services:
       - "5433:5432"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    tmpfs:
+      - /var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U test_user -d test_iso_flow"]
       interval: 5s
       timeout: 5s
       retries: 5
-    tmpfs:
-      - /var/lib/postgresql/data
