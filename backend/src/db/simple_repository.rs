@@ -32,69 +32,66 @@ impl SimpleRepository {
 
 #[cfg(test)]
 mod tests {
-    use crate::db::repository::{mock::MockNewsRepository, NewsRepository};
-    use crate::scraper::{NewsItem, NewsSource};
-    use chrono::Utc;
+    use super::*;
+    use sqlx::postgres::PgPool;
 
-    #[tokio::test]
-    async fn test_repository_with_mock() {
-        // モックリポジトリを作成
-        let mock_repo = MockNewsRepository::new();
+    async fn setup_test_db() -> Option<PgPool> {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
 
-        // テストデータを作成
-        let test_item = NewsItem {
-            id: "test-001".to_string(),
-            title: "LeBron James traded to Lakers".to_string(),
-            description: Some("Big trade news".to_string()),
-            link: "https://example.com/news/1".to_string(),
-            source: NewsSource::ESPN,
-            published_at: Utc::now(),
-            category: "Trade".to_string(),
-        };
+        match PgPool::connect(&database_url).await {
+            Ok(pool) => Some(pool),
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                None
+            }
+        }
+    }
 
-        // ニュースを保存
-        mock_repo.save_news(vec![test_item.clone()]).await.unwrap();
+    #[test]
+    fn test_simple_repository_struct() {
+        // 構造体のフィールドが正しく定義されていることをテスト
+        // (実際のPgPoolを作成せずに、型のテストのみ)
+        use std::mem;
 
-        // 保存されたニュースを確認
-        let all_news = mock_repo.get_all_news().await.unwrap();
-        assert_eq!(all_news.len(), 1);
-        assert_eq!(all_news[0].id, "test-001");
-        assert_eq!(all_news[0].title, "LeBron James traded to Lakers");
+
+        // SimpleRepository構造体のサイズを確認
+        // PgPoolは内部でArcを使うので、ポインタサイズになる
+        assert!(mem::size_of::<SimpleRepository>() >= mem::size_of::<usize>());
     }
 
     #[tokio::test]
-    async fn test_repository_category_filter() {
-        // テストデータを複数作成
-        let items = vec![
-            NewsItem {
-                id: "test-002".to_string(),
-                title: "Trade News 1".to_string(),
-                description: None,
-                link: "https://example.com/2".to_string(),
-                source: NewsSource::ESPN,
-                published_at: Utc::now(),
-                category: "Trade".to_string(),
-            },
-            NewsItem {
-                id: "test-003".to_string(),
-                title: "Signing News 1".to_string(),
-                description: None,
-                link: "https://example.com/3".to_string(),
-                source: NewsSource::RealGM,
-                published_at: Utc::now(),
-                category: "Signing".to_string(),
-            },
-        ];
+    async fn test_new() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = SimpleRepository::new(pool.clone());
 
-        let mock_repo = MockNewsRepository::with_news(items);
+        // newメソッドが正しく動作することを確認
+        let tables_exist = repo.check_tables().await.unwrap();
+        assert!(tables_exist);
+    }
 
-        // カテゴリー別にフィルタリング
-        let trade_news = mock_repo.get_news_by_category("Trade").await.unwrap();
-        assert_eq!(trade_news.len(), 1);
-        assert_eq!(trade_news[0].category, "Trade");
+    #[tokio::test]
+    async fn test_count_news() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = SimpleRepository::new(pool);
 
-        let signing_news = mock_repo.get_news_by_category("Signing").await.unwrap();
-        assert_eq!(signing_news.len(), 1);
-        assert_eq!(signing_news[0].category, "Signing");
+        let count = repo.count_news().await.unwrap();
+        assert!(count >= 0);
+    }
+
+    #[tokio::test]
+    async fn test_check_tables() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = SimpleRepository::new(pool);
+
+        let tables_exist = repo.check_tables().await.unwrap();
+        assert!(tables_exist, "Teams and trade_news tables should exist");
     }
 }

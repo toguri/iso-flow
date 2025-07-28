@@ -261,6 +261,8 @@ mod tests {
 
     #[test]
     fn test_trade_news_from_news_item() {
+        let published_at = Utc::now();
+        
         // NewsItemを作成
         let news_item = NewsItem {
             id: "test-123".to_string(),
@@ -269,43 +271,70 @@ mod tests {
             link: "https://example.com/news/123".to_string(),
             source: NewsSource::ESPN,
             category: "Trade".to_string(),
-            published_at: Utc::now(),
+            published_at,
         };
-
+        
         // TradeNewsに変換
         let trade_news = TradeNews::from(news_item.clone());
-
-        // 各フィールドが正しく変換されていることを確認
-        assert_eq!(trade_news.id, news_item.id);
-        assert_eq!(trade_news.title, news_item.title);
-        assert_eq!(trade_news.description, news_item.description);
-        assert_eq!(trade_news.link, news_item.link);
+        
+        // 全フィールドが正しく変換されていることを確認
+        assert_eq!(trade_news.id, "test-123");
+        assert_eq!(trade_news.title, "Lakers Trade Update");
+        assert_eq!(trade_news.description, Some("Lakers are trading...".to_string()));
+        assert_eq!(trade_news.link, "https://example.com/news/123");
         assert_eq!(trade_news.source, "ESPN");
-        assert_eq!(trade_news.published_at, news_item.published_at);
-        assert_eq!(trade_news.category, news_item.category);
+        assert_eq!(trade_news.category, "Trade");
+        assert_eq!(trade_news.published_at, published_at);
     }
-
+    
     #[test]
-    fn test_trade_news_from_news_item_with_other_source() {
-        // Other sourceタイプのNewsItemを作成
+    fn test_trade_news_from_news_item_without_description() {
+        let published_at = Utc::now();
+        
+        // descriptionがないNewsItemを作成
         let news_item = NewsItem {
             id: "test-456".to_string(),
-            title: "NBA News".to_string(),
+            title: "Celtics Signing".to_string(),
             description: None,
             link: "https://example.com/news/456".to_string(),
-            source: NewsSource::Other("Custom Source".to_string()),
-            category: "Other".to_string(),
-            published_at: Utc::now(),
+            source: NewsSource::RealGM,
+            category: "Signing".to_string(),
+            published_at,
         };
-
+        
         // TradeNewsに変換
         let trade_news = TradeNews::from(news_item);
-
-        // sourceがCustom Sourceとして正しく表示されることを確認
-        assert_eq!(trade_news.source, "Custom Source");
+        
+        // descriptionがNoneであることを確認
+        assert_eq!(trade_news.id, "test-456");
+        assert_eq!(trade_news.title, "Celtics Signing");
         assert_eq!(trade_news.description, None);
+        assert_eq!(trade_news.source, "RealGM");
+        assert_eq!(trade_news.category, "Signing");
     }
-
+    
+    #[test]
+    fn test_trade_news_from_other_news_source() {
+        let published_at = Utc::now();
+        
+        // OtherタイプのNewsSourceを作成
+        let news_item = NewsItem {
+            id: "test-789".to_string(),
+            title: "Warriors Update".to_string(),
+            description: Some("Warriors news...".to_string()),
+            link: "https://example.com/news/789".to_string(),
+            source: NewsSource::Other("CustomSource".to_string()),
+            category: "Other".to_string(),
+            published_at,
+        };
+        
+        // TradeNewsに変換
+        let trade_news = TradeNews::from(news_item);
+        
+        // Otherソースが正しく文字列に変換されることを確認
+        assert_eq!(trade_news.source, "CustomSource");
+    }
+    
     #[test]
     fn test_scrape_result_creation() {
         let result = ScrapeResult {
@@ -313,14 +342,16 @@ mod tests {
             skipped_count: 5,
             error_count: 2,
             errors: vec![
-                "error1: Failed to save".to_string(),
-                "error2: Network error".to_string(),
+                "item1: Network error".to_string(),
+                "item2: Parse error".to_string(),
             ],
         };
-
+        
         assert_eq!(result.saved_count, 10);
         assert_eq!(result.skipped_count, 5);
         assert_eq!(result.error_count, 2);
         assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.errors[0], "item1: Network error");
+        assert_eq!(result.errors[1], "item2: Parse error");
     }
 }
