@@ -32,5 +32,12 @@ mod tests {
         assert_eq!(to_lowercase("World"), "world");
     }
 
-    // trim関数のテストは意図的に省略（カバレッジ率を下げるため）
+    #[test]
+    fn test_trim() {
+        assert_eq!(trim("  hello  "), "hello");
+        assert_eq!(trim("\tworld\n"), "world");
+        assert_eq!(trim("no_space"), "no_space");
+        assert_eq!(trim(""), "");
+        assert_eq!(trim("   "), "");
+    }
 }

@@ -1,0 +1,1 @@
+// Integration tests are now in src/ files as #[cfg(test)] modules
