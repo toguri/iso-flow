@@ -16,10 +16,11 @@ async fn test_health_check_endpoint() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
