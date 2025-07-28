@@ -66,19 +66,14 @@ impl Query {
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
-                // RFC3339文字列からchrono::DateTime<Utc>に変換
-                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-
                 let news_item = NewsItem {
-                    id: item.external_id,
+                    id: item.id,
                     title: item.title,
                     description: item.description,
-                    link: item.source_url,
-                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    link: item.link,
+                    source: crate::scraper::NewsSource::from_string(&item.source),
                     category: item.category,
-                    published_at,
+                    published_at: item.published_at,
                 };
                 TradeNews::from(news_item)
             })
@@ -100,19 +95,14 @@ impl Query {
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
-                // RFC3339文字列からchrono::DateTime<Utc>に変換
-                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-
                 let news_item = NewsItem {
-                    id: item.external_id,
+                    id: item.id,
                     title: item.title,
                     description: item.description,
-                    link: item.source_url,
-                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    link: item.link,
+                    source: crate::scraper::NewsSource::from_string(&item.source),
                     category: item.category,
-                    published_at,
+                    published_at: item.published_at,
                 };
                 TradeNews::from(news_item)
             })
@@ -135,21 +125,16 @@ impl Query {
 
         let news: Vec<TradeNews> = saved_items
             .into_iter()
-            .filter(|item| item.source_name.to_lowercase() == source.to_lowercase())
+            .filter(|item| item.source.to_lowercase() == source.to_lowercase())
             .map(|item| {
-                // RFC3339文字列からchrono::DateTime<Utc>に変換
-                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-
                 let news_item = NewsItem {
-                    id: item.external_id,
+                    id: item.id,
                     title: item.title,
                     description: item.description,
-                    link: item.source_url,
-                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    link: item.link,
+                    source: crate::scraper::NewsSource::from_string(&item.source),
                     category: item.category,
-                    published_at,
+                    published_at: item.published_at,
                 };
                 TradeNews::from(news_item)
             })

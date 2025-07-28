@@ -65,10 +65,10 @@ impl NewsPersistence {
         sqlx::query(
             r#"
             INSERT INTO trade_news (
-                external_id, title, description, source_name, source_url,
-                category, published_at, scraped_at, created_at, updated_at
+                id, title, description, source, link,
+                category, published_at, scraped_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
         )
         .bind(&item.id)
@@ -77,20 +77,18 @@ impl NewsPersistence {
         .bind(&source_name)
         .bind(&item.link)
         .bind(&item.category)
-        .bind(item.published_at.to_rfc3339())
-        .bind(now.to_rfc3339())
-        .bind(now.to_rfc3339())
-        .bind(now.to_rfc3339())
+        .bind(item.published_at)
+        .bind(now)
         .execute(&self.pool)
         .await?;
 
         Ok(true)
     }
 
-    /// 外部IDでニュースの存在確認
+    /// IDでニュースの存在確認
     async fn exists_by_external_id(&self, external_id: &str) -> Result<bool> {
         let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE external_id = $1")
+            sqlx::query_scalar("SELECT COUNT(*) as count FROM trade_news WHERE id = $1")
                 .bind(external_id)
                 .fetch_one(&self.pool)
                 .await?;
@@ -104,16 +102,13 @@ impl NewsPersistence {
             r#"
             SELECT 
                 id,
-                external_id,
                 title,
                 description,
-                source_name,
-                source_url,
+                source,
+                link,
                 category,
-                is_official,
                 published_at,
-                scraped_at,
-                created_at
+                scraped_at
             FROM trade_news
             ORDER BY published_at DESC
             LIMIT $1
@@ -132,16 +127,13 @@ impl NewsPersistence {
             r#"
             SELECT 
                 id,
-                external_id,
                 title,
                 description,
-                source_name,
-                source_url,
+                source,
+                link,
                 category,
-                is_official,
                 published_at,
-                scraped_at,
-                created_at
+                scraped_at
             FROM trade_news
             WHERE category = $1
             ORDER BY published_at DESC
@@ -166,17 +158,14 @@ pub struct SaveResult {
 /// データベースに保存されたニュースアイテム
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SavedNewsItem {
-    pub id: Option<i64>, // PostgreSQLのSERIALはi64として扱われる
-    pub external_id: String,
+    pub id: String,
     pub title: String,
     pub description: Option<String>,
-    pub source_name: String,
-    pub source_url: String,
+    pub source: String,
+    pub link: String,
     pub category: String,
-    pub is_official: Option<bool>, // デフォルト値があるため、Option
-    pub published_at: String,      // RFC3339形式の文字列として保存
-    pub scraped_at: Option<String>,
-    pub created_at: Option<String>,
+    pub published_at: chrono::DateTime<chrono::Utc>,
+    pub scraped_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[cfg(test)]
@@ -202,21 +191,18 @@ mod tests {
     fn test_saved_news_item_struct() {
         // SavedNewsItem構造体の基本的な動作をテスト
         let item = SavedNewsItem {
-            id: Some(1),
-            external_id: "ext-1".to_string(),
+            id: "ext-1".to_string(),
             title: "Test Title".to_string(),
             description: Some("Test Description".to_string()),
-            source_name: "ESPN".to_string(),
-            source_url: "https://example.com".to_string(),
+            source: "ESPN".to_string(),
+            link: "https://example.com".to_string(),
             category: "Trade".to_string(),
-            is_official: Some(true),
-            published_at: "2023-07-26T12:00:00Z".to_string(),
-            scraped_at: Some("2023-07-26T13:00:00Z".to_string()),
-            created_at: Some("2023-07-26T13:00:00Z".to_string()),
+            published_at: chrono::Utc::now(),
+            scraped_at: Some(chrono::Utc::now()),
         };
 
-        assert_eq!(item.external_id, "ext-1");
+        assert_eq!(item.id, "ext-1");
         assert_eq!(item.title, "Test Title");
-        assert_eq!(item.source_name, "ESPN");
+        assert_eq!(item.source, "ESPN");
     }
 }
