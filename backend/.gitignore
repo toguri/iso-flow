@@ -19,3 +19,7 @@ nba_trades_test.db
 # カバレッジファイル
 coverage-*.profraw
 cobertura.xml
+lcov.info
+tarpaulin-report.html
+coverage/
+*.profraw
