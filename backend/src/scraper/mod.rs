@@ -5,8 +5,13 @@
 
 pub mod models;
 pub mod persistence;
+pub mod persistence_trait;
 pub mod rss_parser;
+
+#[cfg(test)]
+mod persistence_trait_test;
 
 pub use models::*;
 pub use persistence::*;
+pub use persistence_trait::*;
 pub use rss_parser::*;
