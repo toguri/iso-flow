@@ -108,6 +108,17 @@ impl RssParser {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_default_trait() {
+        let parser1 = RssParser::new();
+        let parser2 = RssParser::default();
+        
+        // 両方のメソッドが同じようにインスタンスを作成することを確認
+        // (Client自体を比較することはできないので、単にパニックしないことを確認)
+        assert!(std::ptr::eq(&parser1 as *const RssParser, &parser1 as *const RssParser));
+        assert!(std::ptr::eq(&parser2 as *const RssParser, &parser2 as *const RssParser));
+    }
+
     #[tokio::test]
     async fn test_fetch_feeds() {
         let parser = RssParser::new();

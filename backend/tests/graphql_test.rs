@@ -15,10 +15,11 @@ async fn test_graphql_playground() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -47,10 +48,11 @@ async fn test_trade_news_query() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -84,10 +86,11 @@ async fn test_trade_news_by_category_query() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -121,10 +124,11 @@ async fn test_trade_news_by_source_query() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);
@@ -158,10 +162,11 @@ async fn test_invalid_query() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     let schema = create_schema(pool);
     let app = graphql_routes(schema);

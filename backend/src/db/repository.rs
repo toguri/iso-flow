@@ -195,6 +195,22 @@ impl PgNewsRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::postgres::PgPool;
+    use crate::scraper::{NewsItem, NewsSource};
+    use chrono::Utc;
+
+    async fn setup_test_db() -> Option<PgPool> {
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string());
+        
+        match PgPool::connect(&database_url).await {
+            Ok(pool) => Some(pool),
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                None
+            }
+        }
+    }
 
     #[test]
     fn test_pg_news_repository_creation() {
@@ -202,5 +218,119 @@ mod tests {
         // このテストは構造体が正しく定義されていることを確認
         use std::mem::size_of;
         assert!(size_of::<PgNewsRepository>() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_save_and_retrieve_news() {
+        let Some(pool) = setup_test_db().await else { return; };
+        let repo = PgNewsRepository::new(pool.clone());
+        
+        let test_item = NewsItem {
+            id: format!("test-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            title: "Test News".to_string(),
+            description: Some("Test description".to_string()),
+            link: "https://example.com/test".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+        
+        repo.save_news(vec![test_item.clone()]).await.unwrap();
+        
+        let all_news = repo.get_all_news().await.unwrap();
+        assert!(all_news.iter().any(|item| item.id == test_item.id));
+        
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&test_item.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_news_by_category() {
+        let Some(pool) = setup_test_db().await else { return; };
+        let repo = PgNewsRepository::new(pool.clone());
+        
+        let trade_item = NewsItem {
+            id: format!("trade-{}", Utc::now().timestamp_nanos()),
+            title: "Trade News".to_string(),
+            description: None,
+            link: "https://example.com/trade".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+        
+        repo.save_news(vec![trade_item.clone()]).await.unwrap();
+        
+        let trade_news = repo.get_news_by_category("Trade").await.unwrap();
+        assert!(trade_news.iter().any(|item| item.id == trade_item.id));
+        
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&trade_item.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_news_by_source() {
+        let Some(pool) = setup_test_db().await else { return; };
+        let repo = PgNewsRepository::new(pool.clone());
+        
+        let espn_item = NewsItem {
+            id: format!("espn-{}", Utc::now().timestamp_nanos()),
+            title: "ESPN News".to_string(),
+            description: None,
+            link: "https://espn.com/news".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+        
+        repo.save_news(vec![espn_item.clone()]).await.unwrap();
+        
+        let espn_news = repo.get_news_by_source("ESPN").await.unwrap();
+        assert!(espn_news.iter().any(|item| item.id == espn_item.id));
+        
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&espn_item.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_recent_news() {
+        let Some(pool) = setup_test_db().await else { return; };
+        let repo = PgNewsRepository::new(pool.clone());
+        
+        let mut news_items = vec![];
+        for i in 0..3 {
+            news_items.push(NewsItem {
+                id: format!("recent-{}-{}", i, Utc::now().timestamp_nanos()),
+                title: format!("Recent News {}", i),
+                description: Some(format!("Description {}", i)),
+                link: format!("https://example.com/recent/{}", i),
+                source: NewsSource::ESPN,
+                published_at: Utc::now() - chrono::Duration::hours(i),
+                category: "Trade".to_string(),
+            });
+        }
+        
+        repo.save_news(news_items.clone()).await.unwrap();
+        
+        let since = Utc::now() - chrono::Duration::hours(24);
+        let recent_news = repo.get_recent_news(since).await.unwrap();
+        assert!(!recent_news.is_empty());
+        
+        for item in &news_items {
+            sqlx::query("DELETE FROM trade_news WHERE id = $1")
+                .bind(&item.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
     }
 }

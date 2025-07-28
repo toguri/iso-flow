@@ -46,6 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_trade_news_translation_status ON trade_news(trans
 CREATE INDEX IF NOT EXISTS idx_trade_news_link ON trade_news(link);
 
 -- Create trigger
+DROP TRIGGER IF EXISTS update_trade_news_updated_at ON trade_news;
 CREATE TRIGGER update_trade_news_updated_at BEFORE UPDATE
     ON trade_news FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
