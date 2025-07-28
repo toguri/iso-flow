@@ -66,19 +66,14 @@ impl Query {
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
-                // RFC3339文字列からchrono::DateTime<Utc>に変換
-                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-
                 let news_item = NewsItem {
-                    id: item.external_id,
+                    id: item.id,
                     title: item.title,
                     description: item.description,
-                    link: item.source_url,
-                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    link: item.link,
+                    source: crate::scraper::NewsSource::from_string(&item.source),
                     category: item.category,
-                    published_at,
+                    published_at: item.published_at,
                 };
                 TradeNews::from(news_item)
             })
@@ -100,19 +95,14 @@ impl Query {
         let news: Vec<TradeNews> = saved_items
             .into_iter()
             .map(|item| {
-                // RFC3339文字列からchrono::DateTime<Utc>に変換
-                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-
                 let news_item = NewsItem {
-                    id: item.external_id,
+                    id: item.id,
                     title: item.title,
                     description: item.description,
-                    link: item.source_url,
-                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    link: item.link,
+                    source: crate::scraper::NewsSource::from_string(&item.source),
                     category: item.category,
-                    published_at,
+                    published_at: item.published_at,
                 };
                 TradeNews::from(news_item)
             })
@@ -135,21 +125,16 @@ impl Query {
 
         let news: Vec<TradeNews> = saved_items
             .into_iter()
-            .filter(|item| item.source_name.to_lowercase() == source.to_lowercase())
+            .filter(|item| item.source.to_lowercase() == source.to_lowercase())
             .map(|item| {
-                // RFC3339文字列からchrono::DateTime<Utc>に変換
-                let published_at = DateTime::parse_from_rfc3339(&item.published_at)
-                    .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-
                 let news_item = NewsItem {
-                    id: item.external_id,
+                    id: item.id,
                     title: item.title,
                     description: item.description,
-                    link: item.source_url,
-                    source: crate::scraper::NewsSource::from_string(&item.source_name),
+                    link: item.link,
+                    source: crate::scraper::NewsSource::from_string(&item.source),
                     category: item.category,
-                    published_at,
+                    published_at: item.published_at,
                 };
                 TradeNews::from(news_item)
             })
@@ -221,16 +206,6 @@ pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription>
         .finish()
 }
 
-/// リポジトリを使用してGraphQLスキーマを作成（テスト用）
-#[cfg(any(test, feature = "test-utils"))]
-pub fn create_schema_with_repository(
-    repository: std::sync::Arc<dyn crate::db::repository::NewsRepository>,
-) -> Schema<Query, Mutation, EmptySubscription> {
-    Schema::build(Query, Mutation, EmptySubscription)
-        .data(repository)
-        .finish()
-}
-
 pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
     use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
     use axum::{extract::State, response::Html, routing::get, Router};
@@ -261,6 +236,8 @@ mod tests {
 
     #[test]
     fn test_trade_news_from_news_item() {
+        let published_at = Utc::now();
+
         // NewsItemを作成
         let news_item = NewsItem {
             id: "test-123".to_string(),
@@ -269,41 +246,71 @@ mod tests {
             link: "https://example.com/news/123".to_string(),
             source: NewsSource::ESPN,
             category: "Trade".to_string(),
-            published_at: Utc::now(),
+            published_at,
         };
 
         // TradeNewsに変換
         let trade_news = TradeNews::from(news_item.clone());
 
-        // 各フィールドが正しく変換されていることを確認
-        assert_eq!(trade_news.id, news_item.id);
-        assert_eq!(trade_news.title, news_item.title);
-        assert_eq!(trade_news.description, news_item.description);
-        assert_eq!(trade_news.link, news_item.link);
+        // 全フィールドが正しく変換されていることを確認
+        assert_eq!(trade_news.id, "test-123");
+        assert_eq!(trade_news.title, "Lakers Trade Update");
+        assert_eq!(
+            trade_news.description,
+            Some("Lakers are trading...".to_string())
+        );
+        assert_eq!(trade_news.link, "https://example.com/news/123");
         assert_eq!(trade_news.source, "ESPN");
-        assert_eq!(trade_news.published_at, news_item.published_at);
-        assert_eq!(trade_news.category, news_item.category);
+        assert_eq!(trade_news.category, "Trade");
+        assert_eq!(trade_news.published_at, published_at);
     }
 
     #[test]
-    fn test_trade_news_from_news_item_with_other_source() {
-        // Other sourceタイプのNewsItemを作成
+    fn test_trade_news_from_news_item_without_description() {
+        let published_at = Utc::now();
+
+        // descriptionがないNewsItemを作成
         let news_item = NewsItem {
             id: "test-456".to_string(),
-            title: "NBA News".to_string(),
+            title: "Celtics Signing".to_string(),
             description: None,
             link: "https://example.com/news/456".to_string(),
-            source: NewsSource::Other("Custom Source".to_string()),
-            category: "Other".to_string(),
-            published_at: Utc::now(),
+            source: NewsSource::RealGM,
+            category: "Signing".to_string(),
+            published_at,
         };
 
         // TradeNewsに変換
         let trade_news = TradeNews::from(news_item);
 
-        // sourceがCustom Sourceとして正しく表示されることを確認
-        assert_eq!(trade_news.source, "Custom Source");
+        // descriptionがNoneであることを確認
+        assert_eq!(trade_news.id, "test-456");
+        assert_eq!(trade_news.title, "Celtics Signing");
         assert_eq!(trade_news.description, None);
+        assert_eq!(trade_news.source, "RealGM");
+        assert_eq!(trade_news.category, "Signing");
+    }
+
+    #[test]
+    fn test_trade_news_from_other_news_source() {
+        let published_at = Utc::now();
+
+        // OtherタイプのNewsSourceを作成
+        let news_item = NewsItem {
+            id: "test-789".to_string(),
+            title: "Warriors Update".to_string(),
+            description: Some("Warriors news...".to_string()),
+            link: "https://example.com/news/789".to_string(),
+            source: NewsSource::Other("CustomSource".to_string()),
+            category: "Other".to_string(),
+            published_at,
+        };
+
+        // TradeNewsに変換
+        let trade_news = TradeNews::from(news_item);
+
+        // Otherソースが正しく文字列に変換されることを確認
+        assert_eq!(trade_news.source, "CustomSource");
     }
 
     #[test]
@@ -313,8 +320,8 @@ mod tests {
             skipped_count: 5,
             error_count: 2,
             errors: vec![
-                "error1: Failed to save".to_string(),
-                "error2: Network error".to_string(),
+                "item1: Network error".to_string(),
+                "item2: Parse error".to_string(),
             ],
         };
 
@@ -322,5 +329,7 @@ mod tests {
         assert_eq!(result.skipped_count, 5);
         assert_eq!(result.error_count, 2);
         assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.errors[0], "item1: Network error");
+        assert_eq!(result.errors[1], "item2: Parse error");
     }
 }

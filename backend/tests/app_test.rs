@@ -16,10 +16,11 @@ async fn test_graphql_playground_endpoint() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
@@ -56,10 +57,11 @@ async fn test_graphql_post_endpoint() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
@@ -98,10 +100,11 @@ async fn test_cors_headers() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
@@ -137,10 +140,11 @@ async fn test_create_app_routes() {
             return;
         }
     };
-    sqlx::migrate!("./migrations_postgres")
-        .run(&pool)
-        .await
-        .unwrap();
+    // 結合テスト環境ではinit.sqlでテーブルが作成されるため、マイグレーションはスキップ
+    // sqlx::migrate!("./migrations_postgres")
+    //     .run(&pool)
+    //     .await
+    //     .unwrap();
 
     // アプリケーションを作成
     let app = create_app(pool);
