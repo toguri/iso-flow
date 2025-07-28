@@ -41,9 +41,6 @@ pub mod db;
 /// GraphQL APIの実装
 pub mod graphql;
 
-/// GraphQLコンテキスト
-pub mod graphql_context;
-
 /// RSSスクレイピング機能
 pub mod scraper;
 
@@ -53,9 +50,6 @@ pub mod scheduler;
 /// ユーティリティ関数
 pub mod utils;
 
-/// テスト用ユーティリティ
-#[cfg(any(test, feature = "test-utils"))]
-pub mod test_utils;
 
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};

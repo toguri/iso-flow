@@ -221,15 +221,6 @@ pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription>
         .finish()
 }
 
-/// リポジトリを使用してGraphQLスキーマを作成（テスト用）
-#[cfg(any(test, feature = "test-utils"))]
-pub fn create_schema_with_repository(
-    repository: std::sync::Arc<dyn crate::db::repository::NewsRepository>,
-) -> Schema<Query, Mutation, EmptySubscription> {
-    Schema::build(Query, Mutation, EmptySubscription)
-        .data(repository)
-        .finish()
-}
 
 pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
     use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
