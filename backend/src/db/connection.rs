@@ -70,13 +70,23 @@ mod tests {
     #[tokio::test]
     #[ignore = "Requires PostgreSQL database"]
     async fn test_create_pool() {
-        let database_url = "postgresql://test_user:test_password@localhost:5433/test_iso_flow";
-        std::env::set_var("DATABASE_URL", database_url);
+        // CIまたはローカル環境での実行時、DATABASE_URLが既に設定されているかチェック
+        let original_url = std::env::var("DATABASE_URL").ok();
+        
+        // テスト用のURLを設定（環境変数が設定されていない場合のみ）
+        if original_url.is_none() {
+            let database_url = "postgresql://test_user:test_password@localhost:5433/test_iso_flow";
+            std::env::set_var("DATABASE_URL", database_url);
+        }
 
         let result = create_pool().await;
-        assert!(result.is_ok(), "Should create connection pool");
-
-        std::env::remove_var("DATABASE_URL");
+        
+        // 環境変数をクリーンアップ（元々設定されていなかった場合のみ）
+        if original_url.is_none() {
+            std::env::remove_var("DATABASE_URL");
+        }
+        
+        assert!(result.is_ok(), "Should create connection pool: {:?}", result.err());
     }
 
     #[test]
