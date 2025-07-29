@@ -72,7 +72,7 @@ jobs:
         DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
       run: |
         cargo install sqlx-cli --no-default-features --features postgres
-        sqlx migrate run
+        sqlx migrate run --source migrations_postgres
     
     - name: Generate coverage report
       env:
