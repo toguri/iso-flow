@@ -389,11 +389,12 @@ mod tests {
         // 空のIDはデータベースレベルでエラーになるか、保存されない
         if result.is_ok() {
             // 保存されていないことを確認
-            let count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM trade_news WHERE id = $1")
-                .bind(&invalid_item.id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let count =
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM trade_news WHERE id = $1")
+                    .bind(&invalid_item.id)
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
             assert_eq!(count, 0, "Empty ID should not be saved");
         }
     }
