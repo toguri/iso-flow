@@ -386,7 +386,7 @@ mod tests {
 
         // 保存を試みる
         let result = persistence.save_single_item(&invalid_item).await;
-        
+
         // PostgreSQLでは空文字列のIDも保存できてしまうので、
         // 保存後にクリーンアップが必要
         if result.is_ok() {
@@ -396,7 +396,7 @@ mod tests {
                 .execute(&pool)
                 .await
                 .unwrap();
-            
+
             // 実装によっては空のIDでも保存できることがあるので、
             // これはエラーではない
             println!("Note: Empty ID was saved successfully, which may be unexpected");
