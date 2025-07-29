@@ -233,8 +233,8 @@ mod tests {
     use super::*;
     use crate::db::connection::create_pool;
     use crate::scraper::{NewsItem, NewsSource};
-    use chrono::Utc;
     use async_graphql::Value;
+    use chrono::Utc;
 
     #[tokio::test]
     #[ignore = "Requires PostgreSQL database"]
@@ -459,7 +459,10 @@ mod tests {
             }
         "#;
         let result = schema.execute(mutation).await;
-        assert!(!result.errors.is_empty() || result.data != Value::Null, "Should execute mutation");
+        assert!(
+            !result.errors.is_empty() || result.data != Value::Null,
+            "Should execute mutation"
+        );
 
         std::env::remove_var("DATABASE_URL");
     }
