@@ -161,7 +161,9 @@ jobs:
         run: cargo clippy -- -D warnings
 
       - name: Run tests
-        run: cargo test
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: cargo test -- --include-ignored
 
   # ステップ3.5: テスト実行（必須チェック用）
   test:
@@ -295,9 +297,11 @@ jobs:
           fi
 
       - name: Generate coverage report
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
         run: |
           echo "🧪 Running tests with coverage..."
-          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
+          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
 
       - name: Upload backend coverage to Codecov
         uses: codecov/codecov-action@v4
