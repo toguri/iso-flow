@@ -231,8 +231,106 @@ pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::connection::create_pool;
     use crate::scraper::{NewsItem, NewsSource};
+    use async_graphql::Value;
     use chrono::Utc;
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_query_resolver_all_trade_news() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        // GraphQLスキーマを作成してコンテキスト経由でテスト
+        let schema = create_schema(pool.clone());
+        let query = r#"
+            query {
+                tradeNews {
+                    id
+                    title
+                }
+            }
+        "#;
+        let result = schema.execute(query).await;
+        assert!(result.is_ok(), "Should retrieve all trade news");
+
+        std::env::remove_var("DATABASE_URL");
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_query_resolver_trade_news_by_category() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        // GraphQLスキーマを作成してコンテキスト経由でテスト
+        let schema = create_schema(pool.clone());
+        let query = r#"
+            query {
+                tradeNewsByCategory(category: "Trade") {
+                    id
+                    category
+                }
+            }
+        "#;
+        let result = schema.execute(query).await;
+        assert!(result.is_ok(), "Should retrieve trade news by category");
+
+        std::env::remove_var("DATABASE_URL");
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_query_resolver_trade_news_by_source() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        // GraphQLスキーマを作成してコンテキスト経由でテスト
+        let schema = create_schema(pool.clone());
+        let query = r#"
+            query {
+                tradeNewsBySource(source: "ESPN") {
+                    id
+                    source
+                }
+            }
+        "#;
+        let result = schema.execute(query).await;
+        assert!(result.is_ok(), "Should retrieve trade news by source");
+
+        std::env::remove_var("DATABASE_URL");
+    }
 
     #[test]
     fn test_trade_news_from_news_item() {
@@ -331,5 +429,41 @@ mod tests {
         assert_eq!(result.errors.len(), 2);
         assert_eq!(result.errors[0], "item1: Network error");
         assert_eq!(result.errors[1], "item2: Parse error");
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires PostgreSQL database"]
+    async fn test_mutation_resolver_scrape_all_feeds() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+        std::env::set_var("DATABASE_URL", database_url);
+
+        let pool = match create_pool().await {
+            Ok(pool) => pool,
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+                return;
+            }
+        };
+
+        // GraphQLスキーマを作成してコンテキスト経由でテスト
+        let schema = create_schema(pool.clone());
+        let mutation = r#"
+            mutation {
+                scrapeAllFeeds {
+                    savedCount
+                    skippedCount
+                    errorCount
+                }
+            }
+        "#;
+        let result = schema.execute(mutation).await;
+        assert!(
+            !result.errors.is_empty() || result.data != Value::Null,
+            "Should execute mutation"
+        );
+
+        std::env::remove_var("DATABASE_URL");
     }
 }

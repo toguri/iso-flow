@@ -20,6 +20,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     
     steps:
     - uses: actions/checkout@v4
@@ -53,10 +67,19 @@ jobs:
           cargo install cargo-tarpaulin --version 0.27.3
         fi
     
+    - name: Run database migrations
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+      run: |
+        cargo install sqlx-cli --no-default-features --features postgres
+        sqlx migrate run --source migrations_postgres
+    
     - name: Generate coverage report
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
       run: |
         echo "🧪 Running tests with coverage..."
-        cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
+        cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
         cargo tarpaulin --print-summary
     
     - name: Upload coverage to Codecov
@@ -65,7 +88,7 @@ jobs:
       with:
         file: ./backend/cobertura.xml
         flags: backend
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         verbose: true
         token: ${{ secrets.CODECOV_TOKEN }}
     

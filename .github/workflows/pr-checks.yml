@@ -137,6 +137,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -160,8 +174,17 @@ jobs:
       - name: Run Clippy
         run: cargo clippy -- -D warnings
 
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
       - name: Run tests
-        run: cargo test
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: cargo test -- --include-ignored
 
   # ステップ3.5: テスト実行（必須チェック用）
   test:
@@ -172,6 +195,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -189,8 +226,17 @@ jobs:
             backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
       - name: Run tests
-        run: cargo test
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: cargo test -- --include-ignored
 
   # ステップ3.6: フロントエンドテスト
   frontend-tests:
@@ -276,6 +322,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -294,10 +354,19 @@ jobs:
             cargo install cargo-tarpaulin --version 0.27.3
           fi
 
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
       - name: Generate coverage report
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
         run: |
           echo "🧪 Running tests with coverage..."
-          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*"
+          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
 
       - name: Upload backend coverage to Codecov
         uses: codecov/codecov-action@v4

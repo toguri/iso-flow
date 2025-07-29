@@ -14,10 +14,10 @@ done
 echo "✅ Database is ready!"
 
 echo "🧪 Running tests..."
-cargo test -- --include-ignored
+DATABASE_URL=postgresql://test_user:test_password@localhost:5433/test_iso_flow cargo test --include-ignored
 
 echo "📊 Running coverage..."
-cargo tarpaulin --out Html --out Lcov --output-dir coverage
+DATABASE_URL=postgresql://test_user:test_password@localhost:5433/test_iso_flow cargo tarpaulin --out Html --out Lcov --output-dir coverage -- --include-ignored
 
 echo "🧹 Cleaning up..."
 docker-compose -f docker-compose.test.yml down -v
