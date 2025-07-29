@@ -397,7 +397,10 @@ mod tests {
         let persistence = NewsPersistence::new(pool.clone());
 
         let valid_item = NewsItem {
-            id: format!("partial-valid-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            id: format!(
+                "partial-valid-{}",
+                Utc::now().timestamp_nanos_opt().unwrap()
+            ),
             title: "Valid Item".to_string(),
             description: None,
             link: "https://example.com/partial-valid".to_string(),

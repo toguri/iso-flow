@@ -72,10 +72,10 @@ mod tests {
     async fn test_create_pool() {
         let database_url = "postgresql://test_user:test_password@localhost:5433/test_iso_flow";
         std::env::set_var("DATABASE_URL", database_url);
-        
+
         let result = create_pool().await;
         assert!(result.is_ok(), "Should create connection pool");
-        
+
         std::env::remove_var("DATABASE_URL");
     }
 
@@ -147,5 +147,4 @@ mod tests {
         // rflindを使うので最後の@でマスクされる
         assert_eq!(masked, "postgresql://****@localhost:5432/db");
     }
-
 }
