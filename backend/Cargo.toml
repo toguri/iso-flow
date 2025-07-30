@@ -44,6 +44,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # HTMLパーサー（将来的に使用）
 scraper = "0.20"
 
+# 正規表現
+regex = "1.11"
+
 # 環境変数
 dotenv = "0.15"
 

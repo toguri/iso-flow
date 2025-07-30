@@ -14,6 +14,7 @@ use sqlx::postgres::PgPool;
 use tracing::info;
 
 use crate::scraper::{NewsItem, NewsPersistence, RssParser};
+use crate::utils::string_utils::strip_html_tags;
 
 /// GraphQLで返されるトレードニュースの構造体
 #[derive(SimpleObject)]
@@ -38,8 +39,8 @@ impl From<NewsItem> for TradeNews {
     fn from(item: NewsItem) -> Self {
         TradeNews {
             id: item.id,
-            title: item.title,
-            description: item.description,
+            title: strip_html_tags(&item.title),
+            description: item.description.map(|desc| strip_html_tags(&desc)),
             link: item.link,
             source: item.source.to_string(),
             published_at: item.published_at,
