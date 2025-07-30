@@ -1,44 +1,44 @@
 -- NBA全30チームのマスターデータ投入
-INSERT INTO teams (id, name, city, conference, division) VALUES
+INSERT INTO teams (id, name, abbreviation, city, conference, division) VALUES
 -- Eastern Conference - Atlantic Division
-('BOS', 'Celtics', 'Boston', 'Eastern', 'Atlantic'),
-('BKN', 'Nets', 'Brooklyn', 'Eastern', 'Atlantic'), 
-('NYK', 'Knicks', 'New York', 'Eastern', 'Atlantic'),
-('PHI', '76ers', 'Philadelphia', 'Eastern', 'Atlantic'),
-('TOR', 'Raptors', 'Toronto', 'Eastern', 'Atlantic'),
+('BOS', 'Celtics', 'BOS', 'Boston', 'Eastern', 'Atlantic'),
+('BKN', 'Nets', 'BKN', 'Brooklyn', 'Eastern', 'Atlantic'), 
+('NYK', 'Knicks', 'NYK', 'New York', 'Eastern', 'Atlantic'),
+('PHI', '76ers', 'PHI', 'Philadelphia', 'Eastern', 'Atlantic'),
+('TOR', 'Raptors', 'TOR', 'Toronto', 'Eastern', 'Atlantic'),
 
 -- Eastern Conference - Central Division
-('CHI', 'Bulls', 'Chicago', 'Eastern', 'Central'),
-('CLE', 'Cavaliers', 'Cleveland', 'Eastern', 'Central'),
-('DET', 'Pistons', 'Detroit', 'Eastern', 'Central'),
-('IND', 'Pacers', 'Indiana', 'Eastern', 'Central'),
-('MIL', 'Bucks', 'Milwaukee', 'Eastern', 'Central'),
+('CHI', 'Bulls', 'CHI', 'Chicago', 'Eastern', 'Central'),
+('CLE', 'Cavaliers', 'CLE', 'Cleveland', 'Eastern', 'Central'),
+('DET', 'Pistons', 'DET', 'Detroit', 'Eastern', 'Central'),
+('IND', 'Pacers', 'IND', 'Indiana', 'Eastern', 'Central'),
+('MIL', 'Bucks', 'MIL', 'Milwaukee', 'Eastern', 'Central'),
 
 -- Eastern Conference - Southeast Division
-('ATL', 'Hawks', 'Atlanta', 'Eastern', 'Southeast'),
-('CHA', 'Hornets', 'Charlotte', 'Eastern', 'Southeast'),
-('MIA', 'Heat', 'Miami', 'Eastern', 'Southeast'),
-('ORL', 'Magic', 'Orlando', 'Eastern', 'Southeast'),
-('WAS', 'Wizards', 'Washington', 'Eastern', 'Southeast'),
+('ATL', 'Hawks', 'ATL', 'Atlanta', 'Eastern', 'Southeast'),
+('CHA', 'Hornets', 'CHA', 'Charlotte', 'Eastern', 'Southeast'),
+('MIA', 'Heat', 'MIA', 'Miami', 'Eastern', 'Southeast'),
+('ORL', 'Magic', 'ORL', 'Orlando', 'Eastern', 'Southeast'),
+('WAS', 'Wizards', 'WAS', 'Washington', 'Eastern', 'Southeast'),
 
 -- Western Conference - Northwest Division  
-('DEN', 'Nuggets', 'Denver', 'Western', 'Northwest'),
-('MIN', 'Timberwolves', 'Minnesota', 'Western', 'Northwest'),
-('OKC', 'Thunder', 'Oklahoma City', 'Western', 'Northwest'),
-('POR', 'Trail Blazers', 'Portland', 'Western', 'Northwest'),
-('UTA', 'Jazz', 'Utah', 'Western', 'Northwest'),
+('DEN', 'Nuggets', 'DEN', 'Denver', 'Western', 'Northwest'),
+('MIN', 'Timberwolves', 'MIN', 'Minnesota', 'Western', 'Northwest'),
+('OKC', 'Thunder', 'OKC', 'Oklahoma City', 'Western', 'Northwest'),
+('POR', 'Trail Blazers', 'POR', 'Portland', 'Western', 'Northwest'),
+('UTA', 'Jazz', 'UTA', 'Utah', 'Western', 'Northwest'),
 
 -- Western Conference - Pacific Division
-('GSW', 'Warriors', 'Golden State', 'Western', 'Pacific'),
-('LAC', 'Clippers', 'Los Angeles', 'Western', 'Pacific'),
-('LAL', 'Lakers', 'Los Angeles', 'Western', 'Pacific'), 
-('PHX', 'Suns', 'Phoenix', 'Western', 'Pacific'),
-('SAC', 'Kings', 'Sacramento', 'Western', 'Pacific'),
+('GSW', 'Warriors', 'GSW', 'Golden State', 'Western', 'Pacific'),
+('LAC', 'Clippers', 'LAC', 'Los Angeles', 'Western', 'Pacific'),
+('LAL', 'Lakers', 'LAL', 'Los Angeles', 'Western', 'Pacific'), 
+('PHX', 'Suns', 'PHX', 'Phoenix', 'Western', 'Pacific'),
+('SAC', 'Kings', 'SAC', 'Sacramento', 'Western', 'Pacific'),
 
 -- Western Conference - Southwest Division
-('DAL', 'Mavericks', 'Dallas', 'Western', 'Southwest'),
-('HOU', 'Rockets', 'Houston', 'Western', 'Southwest'),
-('MEM', 'Grizzlies', 'Memphis', 'Western', 'Southwest'),
-('NOP', 'Pelicans', 'New Orleans', 'Western', 'Southwest'),
-('SAS', 'Spurs', 'San Antonio', 'Western', 'Southwest')
+('DAL', 'Mavericks', 'DAL', 'Dallas', 'Western', 'Southwest'),
+('HOU', 'Rockets', 'HOU', 'Houston', 'Western', 'Southwest'),
+('MEM', 'Grizzlies', 'MEM', 'Memphis', 'Western', 'Southwest'),
+('NOP', 'Pelicans', 'NOP', 'New Orleans', 'Western', 'Southwest'),
+('SAS', 'Spurs', 'SAS', 'San Antonio', 'Western', 'Southwest')
 ON CONFLICT (id) DO NOTHING;
