@@ -137,6 +137,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -160,8 +174,17 @@ jobs:
       - name: Run Clippy
         run: cargo clippy -- -D warnings
 
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
       - name: Run tests
-        run: cargo test
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: cargo test -- --include-ignored
 
   # ステップ3.5: テスト実行（必須チェック用）
   test:
@@ -172,6 +195,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -189,8 +226,17 @@ jobs:
             backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
       - name: Run tests
-        run: cargo test
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: cargo test -- --include-ignored
 
   # ステップ4: セキュリティ監査（条件付き実行）
   security-audit:
@@ -237,27 +283,64 @@ jobs:
     runs-on: ubuntu-latest
     needs: [analyze-pr, common-checks]
     if: needs.analyze-pr.outputs.skip_coverage != 'true'
+    env:
+      SQLX_OFFLINE: true
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache tarpaulin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-tarpaulin-0.27.3
+
       - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin
+        run: |
+          if ! command -v cargo-tarpaulin &> /dev/null; then
+            cargo install cargo-tarpaulin --version 0.27.3
+          fi
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
 
       - name: Generate coverage report
-        run: cargo tarpaulin --out xml
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          echo "🧪 Running tests with coverage..."
+          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
 
-      - name: Upload to Codecov
+      - name: Upload backend coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: ./backend/cobertura.xml
           flags: backend
-          fail_ci_if_error: false
+          fail_ci_if_error: true
+          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # ステップ6.5: Codecovダミーステータス（スキップ時用）
@@ -304,7 +387,7 @@ jobs:
     name: Final Status Check
     runs-on: ubuntu-latest
     if: always()
-    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, security-audit, docs-check, coverage, codecov-skip]
+    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, frontend-tests, security-audit, docs-check, coverage, frontend-coverage, codecov-skip]
     steps:
       - name: Check PR Type
         run: |
@@ -326,6 +409,10 @@ jobs:
           if [[ "${{ needs.analyze-pr.outputs.skip_tests }}" != "true" ]]; then
             if [[ "${{ needs.rust-checks.result }}" != "success" ]]; then
               echo "❌ Rust checks failed"
+              exit 1
+            fi
+            if [[ "${{ needs.frontend-tests.result }}" != "success" ]]; then
+              echo "❌ Frontend tests failed"
               exit 1
             fi
             if [[ "${{ needs.security-audit.result }}" != "success" ]]; then

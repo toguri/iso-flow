@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+    #[ignore = "Requires PostgreSQL database"]
     async fn test_save_news_items() {
         let pool = setup_test_db().await;
         let persistence = NewsPersistence::new(pool);
@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "Temporarily disabled: AnyPool driver issue in tests"]
+    #[ignore = "Requires PostgreSQL database"]
     async fn test_get_recent_news() {
         let pool = setup_test_db().await;
         let persistence = NewsPersistence::new(pool);

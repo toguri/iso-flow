@@ -35,7 +35,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore = "Requires PostgreSQL database connection"]
+    #[ignore = "Requires PostgreSQL database"]
     async fn test_simple_repository() {
         // PostgreSQLデータベースで初期化
         // テスト環境ではPostgreSQLのセットアップが必要
