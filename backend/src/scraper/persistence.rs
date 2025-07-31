@@ -108,7 +108,11 @@ impl NewsPersistence {
                 link,
                 category,
                 published_at,
-                scraped_at
+                scraped_at,
+                title_ja,
+                description_ja,
+                translation_status,
+                translated_at
             FROM trade_news
             ORDER BY published_at DESC
             LIMIT $1
@@ -133,7 +137,11 @@ impl NewsPersistence {
                 link,
                 category,
                 published_at,
-                scraped_at
+                scraped_at,
+                title_ja,
+                description_ja,
+                translation_status,
+                translated_at
             FROM trade_news
             WHERE category = $1
             ORDER BY published_at DESC
@@ -166,6 +174,10 @@ pub struct SavedNewsItem {
     pub category: String,
     pub published_at: chrono::DateTime<chrono::Utc>,
     pub scraped_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub title_ja: Option<String>,
+    pub description_ja: Option<String>,
+    pub translation_status: String,
+    pub translated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[cfg(test)]
@@ -216,6 +228,10 @@ mod tests {
             category: "Trade".to_string(),
             published_at: chrono::Utc::now(),
             scraped_at: Some(chrono::Utc::now()),
+            title_ja: None,
+            description_ja: None,
+            translation_status: "pending".to_string(),
+            translated_at: None,
         };
 
         assert_eq!(item.id, "ext-1");

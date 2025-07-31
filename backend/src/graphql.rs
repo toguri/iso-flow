@@ -11,7 +11,7 @@
 use async_graphql::{Context, EmptySubscription, Object, Schema, SimpleObject};
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgPool;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::scraper::{NewsItem, NewsPersistence, RssParser};
 use crate::utils::string_utils::strip_html_tags;
@@ -33,6 +33,14 @@ pub struct TradeNews {
     pub published_at: DateTime<Utc>,
     /// カテゴリー（Trade、Signing、Other）
     pub category: String,
+    /// 日本語タイトル
+    pub title_ja: Option<String>,
+    /// 日本語説明文
+    pub description_ja: Option<String>,
+    /// 翻訳ステータス
+    pub translation_status: String,
+    /// 翻訳日時
+    pub translated_at: Option<DateTime<Utc>>,
 }
 
 impl From<NewsItem> for TradeNews {
@@ -45,6 +53,10 @@ impl From<NewsItem> for TradeNews {
             source: item.source.to_string(),
             published_at: item.published_at,
             category: item.category,
+            title_ja: None,
+            description_ja: None,
+            translation_status: "pending".to_string(),
+            translated_at: None,
         }
     }
 }
@@ -63,20 +75,21 @@ impl Query {
 
         let saved_items = persistence.get_recent_news(100).await?;
 
-        // SavedNewsItemからNewsItemに変換してからTradeNewsに変換
+        // SavedNewsItemからTradeNewsに変換
         let news: Vec<TradeNews> = saved_items
             .into_iter()
-            .map(|item| {
-                let news_item = NewsItem {
-                    id: item.id,
-                    title: item.title,
-                    description: item.description,
-                    link: item.link,
-                    source: crate::scraper::NewsSource::from_string(&item.source),
-                    category: item.category,
-                    published_at: item.published_at,
-                };
-                TradeNews::from(news_item)
+            .map(|item| TradeNews {
+                id: item.id,
+                title: strip_html_tags(&item.title),
+                description: item.description.map(|desc| strip_html_tags(&desc)),
+                link: item.link,
+                source: item.source,
+                category: item.category,
+                published_at: item.published_at,
+                title_ja: item.title_ja,
+                description_ja: item.description_ja,
+                translation_status: item.translation_status,
+                translated_at: item.translated_at,
             })
             .collect();
 
@@ -95,17 +108,18 @@ impl Query {
 
         let news: Vec<TradeNews> = saved_items
             .into_iter()
-            .map(|item| {
-                let news_item = NewsItem {
-                    id: item.id,
-                    title: item.title,
-                    description: item.description,
-                    link: item.link,
-                    source: crate::scraper::NewsSource::from_string(&item.source),
-                    category: item.category,
-                    published_at: item.published_at,
-                };
-                TradeNews::from(news_item)
+            .map(|item| TradeNews {
+                id: item.id,
+                title: strip_html_tags(&item.title),
+                description: item.description.map(|desc| strip_html_tags(&desc)),
+                link: item.link,
+                source: item.source,
+                category: item.category,
+                published_at: item.published_at,
+                title_ja: item.title_ja,
+                description_ja: item.description_ja,
+                translation_status: item.translation_status,
+                translated_at: item.translated_at,
             })
             .collect();
 
@@ -184,6 +198,128 @@ impl Mutation {
                 .collect(),
         })
     }
+
+    /// 未翻訳のニュースを翻訳
+    async fn translate_pending_news(
+        &self,
+        ctx: &Context<'_>,
+    ) -> async_graphql::Result<TranslationResult> {
+        let pool = ctx.data::<PgPool>()?;
+
+        info!("Starting translation of pending news...");
+
+        // 環境変数から翻訳サービスの設定を取得
+        let api_url = std::env::var("LIBRE_TRANSLATE_URL")
+            .unwrap_or_else(|_| "https://libretranslate.com".to_string());
+        let api_key = std::env::var("LIBRE_TRANSLATE_API_KEY").ok();
+
+        // 翻訳サービスを初期化（開発中はモックサービスを使用）
+        let use_mock =
+            std::env::var("USE_MOCK_TRANSLATION").unwrap_or_else(|_| "true".to_string()) == "true";
+
+        let translation_service: Box<dyn crate::services::TranslationService> = if use_mock {
+            Box::new(crate::services::MockTranslationService)
+        } else {
+            Box::new(crate::services::LibreTranslateService::new(
+                api_url, api_key,
+            ))
+        };
+
+        // 未翻訳のニュースを取得
+        let pending_items = sqlx::query_as::<_, crate::scraper::persistence::SavedNewsItem>(
+            r#"
+            SELECT 
+                id, title, description, source, link, category, 
+                published_at, scraped_at, title_ja, description_ja, 
+                translation_status, translated_at
+            FROM trade_news
+            WHERE translation_status = 'pending' OR translation_status IS NULL
+            ORDER BY published_at DESC
+            LIMIT 10
+            "#,
+        )
+        .fetch_all(pool)
+        .await?;
+
+        info!("Found {} items to translate", pending_items.len());
+
+        let mut translated_count = 0;
+        let mut error_count = 0;
+        let mut errors = Vec::new();
+
+        for item in pending_items {
+            // タイトルの翻訳
+            let title_ja = match translation_service.translate(&item.title, "en", "ja").await {
+                Ok(text) => text,
+                Err(e) => {
+                    error!("Failed to translate title for {}: {}", item.id, e);
+                    errors.push(format!("{}: Title translation failed - {}", item.id, e));
+                    error_count += 1;
+                    continue;
+                }
+            };
+
+            // 説明文の翻訳（存在する場合）
+            let description_ja = if let Some(desc) = &item.description {
+                match translation_service.translate(desc, "en", "ja").await {
+                    Ok(text) => Some(text),
+                    Err(e) => {
+                        error!("Failed to translate description for {}: {}", item.id, e);
+                        errors.push(format!(
+                            "{}: Description translation failed - {}",
+                            item.id, e
+                        ));
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
+            // データベースを更新
+            let result = sqlx::query(
+                r#"
+                UPDATE trade_news
+                SET title_ja = $1,
+                    description_ja = $2,
+                    translation_status = 'completed',
+                    translated_at = NOW()
+                WHERE id = $3
+                "#,
+            )
+            .bind(&title_ja)
+            .bind(&description_ja)
+            .bind(&item.id)
+            .execute(pool)
+            .await;
+
+            match result {
+                Ok(_) => {
+                    translated_count += 1;
+                    info!("Successfully translated item: {}", item.id);
+                }
+                Err(e) => {
+                    error!("Failed to update database for {}: {}", item.id, e);
+                    errors.push(format!("{}: Database update failed - {}", item.id, e));
+                    error_count += 1;
+                }
+            }
+
+            // レート制限を考慮して少し待機
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        }
+
+        info!(
+            "Translation completed: {} translated, {} errors",
+            translated_count, error_count
+        );
+
+        Ok(TranslationResult {
+            translated_count,
+            error_count,
+            errors,
+        })
+    }
 }
 
 /// スクレイピング結果
@@ -193,6 +329,17 @@ pub struct ScrapeResult {
     pub saved_count: i32,
     /// 重複のためスキップされたアイテム数
     pub skipped_count: i32,
+    /// エラー数
+    pub error_count: i32,
+    /// エラーメッセージのリスト
+    pub errors: Vec<String>,
+}
+
+/// 翻訳結果
+#[derive(SimpleObject)]
+pub struct TranslationResult {
+    /// 翻訳されたアイテム数
+    pub translated_count: i32,
     /// エラー数
     pub error_count: i32,
     /// エラーメッセージのリスト

@@ -1,0 +1,91 @@
+{
+  "Comment": "NBA記事翻訳ワークフロー",
+  "StartAt": "GetPendingArticles",
+  "States": {
+    "GetPendingArticles": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${GetPendingArticlesFunction}",
+        "Payload": {
+          "limit": 10
+        }
+      },
+      "Next": "ProcessArticles",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ]
+    },
+    "ProcessArticles": {
+      "Type": "Map",
+      "ItemsPath": "$.articles",
+      "MaxConcurrency": 5,
+      "Parameters": {
+        "article.$": "$$.Map.Item.Value"
+      },
+      "Iterator": {
+        "StartAt": "TranslateArticle",
+        "States": {
+          "TranslateArticle": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${TranslateArticleFunction}",
+              "Payload": {
+                "articleId.$": "$.article.id",
+                "title.$": "$.article.title",
+                "description.$": "$.article.description"
+              }
+            },
+            "Next": "UpdateDatabase",
+            "Retry": [
+              {
+                "ErrorEquals": ["TranslateThrottledException"],
+                "IntervalSeconds": 5,
+                "MaxAttempts": 5,
+                "BackoffRate": 2
+              },
+              {
+                "ErrorEquals": ["States.ALL"],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 3,
+                "BackoffRate": 2
+              }
+            ]
+          },
+          "UpdateDatabase": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName": "${UpdateDatabaseFunction}",
+              "Payload": {
+                "articleId.$": "$.articleId",
+                "titleJa.$": "$.translatedTitle",
+                "descriptionJa.$": "$.translatedDescription"
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "NotifyCompletion"
+    },
+    "NotifyCompletion": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${NotificationTopic}",
+        "Message": {
+          "translatedCount.$": "$.translatedCount",
+          "timestamp.$": "$$.State.EnteredTime"
+        }
+      },
+      "End": true
+    }
+  }
+}

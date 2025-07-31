@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: iso_flow_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # LocalStack (AWS サービスのモック)
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      - SERVICES=sqs,lambda,stepfunctions,translate,secretsmanager
+      - DEBUG=1
+      - LAMBDA_EXECUTOR=local
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    volumes:
+      - "${TMPDIR:-/tmp}/localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # Redisキャッシュ（将来の拡張用）
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+
+# 使用方法:
+# docker-compose -f docker-compose.dev.yml up -d
+# 
+# LocalStack AWS CLI設定:
+# aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name translation-queue
+# aws --endpoint-url=http://localhost:4566 translate translate-text --text "Hello" --source-language-code en --target-language-code ja

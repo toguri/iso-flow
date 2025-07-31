@@ -50,6 +50,9 @@ pub mod scheduler;
 /// ユーティリティ関数
 pub mod utils;
 
+/// サービス層（翻訳など）
+pub mod services;
+
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{routing::get, Router};

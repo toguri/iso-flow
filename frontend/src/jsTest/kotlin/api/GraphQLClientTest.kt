@@ -37,7 +37,11 @@ class GraphQLClientTest {
                 link = "https://example.com/1",
                 source = "ESPN",
                 publishedAt = "2025-07-27T12:00:00Z",
-                category = "Trade"
+                category = "Trade",
+                titleJa = null,
+                descriptionJa = null,
+                translationStatus = "pending",
+                translatedAt = null
             ),
             NewsItem(
                 id = "2",
@@ -46,7 +50,11 @@ class GraphQLClientTest {
                 link = "https://example.com/2",
                 source = "RealGM",
                 publishedAt = "2025-07-27T13:00:00Z",
-                category = "Signing"
+                category = "Signing",
+                titleJa = null,
+                descriptionJa = null,
+                translationStatus = "pending",
+                translatedAt = null
             )
         )
         
@@ -101,7 +109,11 @@ class GraphQLClientTest {
                             "link": "https://nba.com/news/123",
                             "source": "NBA.com",
                             "publishedAt": "2025-07-27T10:00:00Z",
-                            "category": "Trade"
+                            "category": "Trade",
+                            "titleJa": null,
+                            "descriptionJa": null,
+                            "translationStatus": "pending",
+                            "translatedAt": null
                         }
                     ]
                 }

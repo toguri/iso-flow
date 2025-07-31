@@ -10,5 +10,9 @@ data class NewsItem(
     val link: String,
     val source: String,
     val publishedAt: String,
-    val category: String
+    val category: String,
+    val titleJa: String? = null,
+    val descriptionJa: String? = null,
+    val translationStatus: String = "pending",
+    val translatedAt: String? = null
 )

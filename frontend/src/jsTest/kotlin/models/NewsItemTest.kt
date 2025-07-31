@@ -20,7 +20,11 @@ class NewsItemTest {
             link = "https://example.com/news/123",
             source = "ESPN",
             publishedAt = "2025-07-27T12:00:00Z",
-            category = "Trade"
+            category = "Trade",
+            titleJa = null,
+            descriptionJa = null,
+            translationStatus = "pending",
+            translatedAt = null
         )
         
         val jsonString = json.encodeToString(NewsItem.serializer(), newsItem)
@@ -33,6 +37,10 @@ class NewsItemTest {
         assertEquals(newsItem.source, decoded.source)
         assertEquals(newsItem.publishedAt, decoded.publishedAt)
         assertEquals(newsItem.category, decoded.category)
+        assertEquals(newsItem.titleJa, decoded.titleJa)
+        assertEquals(newsItem.descriptionJa, decoded.descriptionJa)
+        assertEquals(newsItem.translationStatus, decoded.translationStatus)
+        assertEquals(newsItem.translatedAt, decoded.translatedAt)
     }
     
     @Test
@@ -44,7 +52,11 @@ class NewsItemTest {
             link = "https://example.com/news/456",
             source = "RealGM",
             publishedAt = "2025-07-27T14:00:00Z",
-            category = "Signing"
+            category = "Signing",
+            titleJa = null,
+            descriptionJa = null,
+            translationStatus = "pending",
+            translatedAt = null
         )
         
         assertNull(newsItem.description)
@@ -53,6 +65,10 @@ class NewsItemTest {
         val decoded = json.decodeFromString(NewsItem.serializer(), jsonString)
         
         assertNull(decoded.description)
+        assertNull(decoded.titleJa)
+        assertNull(decoded.descriptionJa)
+        assertEquals("pending", decoded.translationStatus)
+        assertNull(decoded.translatedAt)
     }
     
     @Test
@@ -65,7 +81,11 @@ class NewsItemTest {
                 "link": "https://example.com/news/789",
                 "source": "NBA.com",
                 "publishedAt": "2025-07-27T16:00:00Z",
-                "category": "Other"
+                "category": "Other",
+                "titleJa": null,
+                "descriptionJa": null,
+                "translationStatus": "pending",
+                "translatedAt": null
             }
         """.trimIndent()
         
@@ -78,6 +98,10 @@ class NewsItemTest {
         assertEquals("NBA.com", newsItem.source)
         assertEquals("2025-07-27T16:00:00Z", newsItem.publishedAt)
         assertEquals("Other", newsItem.category)
+        assertNull(newsItem.titleJa)
+        assertNull(newsItem.descriptionJa)
+        assertEquals("pending", newsItem.translationStatus)
+        assertNull(newsItem.translatedAt)
     }
     
     @Test
@@ -100,5 +124,9 @@ class NewsItemTest {
         assertEquals("999", newsItem.id)
         assertEquals("Test Title", newsItem.title)
         assertNull(newsItem.description) // descriptionフィールドがない場合はnull
+        assertNull(newsItem.titleJa)
+        assertNull(newsItem.descriptionJa)
+        assertEquals("pending", newsItem.translationStatus)
+        assertNull(newsItem.translatedAt)
     }
 }

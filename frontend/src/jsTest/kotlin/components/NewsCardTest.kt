@@ -66,7 +66,11 @@ class NewsCardTest {
             link = "https://www.espn.com/nba/story/123",
             source = "ESPN",
             publishedAt = "2025-07-27T15:30:00Z",
-            category = "Trade"
+            category = "Trade",
+            titleJa = null,
+            descriptionJa = null,
+            translationStatus = "pending",
+            translatedAt = null
         )
         
         // カテゴリのCSSクラス名生成
@@ -85,7 +89,11 @@ class NewsCardTest {
             id = "1", title = "Trade", description = null,
             link = "link", source = "source", 
             publishedAt = "2025-07-27T00:00:00Z",
-            category = "Trade"
+            category = "Trade",
+            titleJa = null,
+            descriptionJa = null,
+            translationStatus = "pending",
+            translatedAt = null
         )
         assertEquals("category-trade", "category-${tradeItem.category.lowercase()}")
         
