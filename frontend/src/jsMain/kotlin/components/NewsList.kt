@@ -65,8 +65,12 @@ fun NewsList(selectedCategory: String?) {
                 }
             }
             else -> {
-                newsItems.forEach { newsItem ->
-                    NewsCard(newsItem)
+                Div(attrs = {
+                    classes("news-grid")
+                }) {
+                    newsItems.forEach { newsItem ->
+                        NewsCard(newsItem)
+                    }
                 }
             }
         }
@@ -79,6 +83,27 @@ object NewsListStyles : StyleSheet() {
     init {
         ".news-list" style {
             marginTop(2.em)
+        }
+        
+        ".news-grid" style {
+            display(DisplayStyle.Grid)
+            property("grid-template-columns", "repeat(3, 1fr)")
+            gap(1.5.em)
+            marginTop(1.em)
+        }
+        
+        // レスポンシブデザイン - タブレット
+        media("(max-width: 1024px)") {
+            ".news-grid" style {
+                property("grid-template-columns", "repeat(2, 1fr)")
+            }
+        }
+        
+        // レスポンシブデザイン - モバイル
+        media("(max-width: 600px)") {
+            ".news-grid" style {
+                property("grid-template-columns", "1fr")
+            }
         }
         
         ".loading-container" style {
