@@ -90,7 +90,7 @@ object AppStylesheet : StyleSheet() {
         ".app-content" style {
             flex(1)
             padding(2.em)
-            maxWidth(1200.px)
+            maxWidth(1400.px)
             width(100.percent)
             property("margin", "0 auto")
         }

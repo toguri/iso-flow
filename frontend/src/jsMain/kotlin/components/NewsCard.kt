@@ -35,7 +35,7 @@ fun NewsCard(newsItem: NewsItem) {
             P(attrs = {
                 classes("news-card-description")
             }) {
-                Text(desc)
+                Text(desc.take(150) + if (desc.length > 150) "..." else "")
             }
         }
         
@@ -84,9 +84,11 @@ object NewsCardStyles : StyleSheet() {
             backgroundColor(Color.white)
             borderRadius(8.px)
             padding(1.5.em)
-            marginBottom(1.5.em)
             property("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
             property("transition", "box-shadow 0.3s ease")
+            display(DisplayStyle.Flex)
+            flexDirection(FlexDirection.Column)
+            height(100.percent)
         }
         
         ".news-card:hover" style {
@@ -103,8 +105,12 @@ object NewsCardStyles : StyleSheet() {
         ".news-card-title" style {
             flex(1)
             marginRight(1.em)
-            fontSize(1.3.em)
+            fontSize(1.2.em)
             lineHeight(1.4.cssRem)
+            overflow("hidden")
+            property("display", "-webkit-box")
+            property("-webkit-line-clamp", "2")
+            property("-webkit-box-orient", "vertical")
         }
         
         ".news-card-title a" style {
@@ -146,6 +152,11 @@ object NewsCardStyles : StyleSheet() {
             color(Color("#666"))
             lineHeight(1.6.cssRem)
             marginBottom(1.em)
+            flex(1)
+            overflow("hidden")
+            property("display", "-webkit-box")
+            property("-webkit-line-clamp", "4")
+            property("-webkit-box-orient", "vertical")
         }
         
         ".news-card-footer" style {
@@ -153,6 +164,8 @@ object NewsCardStyles : StyleSheet() {
             justifyContent(JustifyContent.SpaceBetween)
             fontSize(0.85.em)
             color(Color("#999"))
+            property("margin-top", "auto")
+            paddingTop(1.em)
         }
         
         ".news-card-date" style {
