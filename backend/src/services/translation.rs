@@ -1,23 +1,21 @@
 //! 翻訳サービスの実装
 //!
-//! LibreTranslate APIを使用して英語から日本語への翻訳を提供します。
+//! Amazon Translateを使用して英語から日本語への翻訳を提供します。
 
 use async_trait::async_trait;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use aws_config::BehaviorVersion;
+use aws_sdk_translate::Client as TranslateClient;
 use thiserror::Error;
 use tracing::{debug, error, info};
 
 #[derive(Error, Debug)]
 pub enum TranslationError {
-    #[error("API request failed: {0}")]
-    ApiError(String),
+    #[error("AWS SDK error: {0}")]
+    AwsError(String),
+    #[error("Translation failed: {0}")]
+    TranslationFailed(String),
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
-    #[error("Network error: {0}")]
-    NetworkError(#[from] reqwest::Error),
-    #[error("JSON parsing error: {0}")]
-    JsonError(#[from] serde_json::Error),
 }
 
 #[async_trait]
@@ -30,44 +28,21 @@ pub trait TranslationService: Send + Sync {
     ) -> Result<String, TranslationError>;
 }
 
-#[derive(Serialize)]
-struct TranslateRequest {
-    q: String,
-    source: String,
-    target: String,
-    format: String,
-    api_key: Option<String>,
+pub struct AmazonTranslateService {
+    client: TranslateClient,
 }
 
-#[derive(Deserialize)]
-struct TranslateResponse {
-    #[serde(rename = "translatedText")]
-    translated_text: String,
-}
+impl AmazonTranslateService {
+    pub async fn new() -> Self {
+        let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+        let client = TranslateClient::new(&config);
 
-pub struct LibreTranslateService {
-    client: Client,
-    api_url: String,
-    api_key: Option<String>,
-}
-
-impl LibreTranslateService {
-    pub fn new(api_url: String, api_key: Option<String>) -> Self {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .build()
-            .expect("Failed to create HTTP client");
-
-        Self {
-            client,
-            api_url,
-            api_key,
-        }
+        Self { client }
     }
 }
 
 #[async_trait]
-impl TranslationService for LibreTranslateService {
+impl TranslationService for AmazonTranslateService {
     async fn translate(
         &self,
         text: &str,
@@ -78,14 +53,6 @@ impl TranslationService for LibreTranslateService {
             return Ok(String::new());
         }
 
-        let request = TranslateRequest {
-            q: text.to_string(),
-            source: source_lang.to_string(),
-            target: target_lang.to_string(),
-            format: "text".to_string(),
-            api_key: self.api_key.clone(),
-        };
-
         debug!(
             "Translating text from {} to {}: {} chars",
             source_lang,
@@ -93,35 +60,41 @@ impl TranslationService for LibreTranslateService {
             text.len()
         );
 
-        let response = self
+        let result = self
             .client
-            .post(format!("{}/translate", self.api_url))
-            .json(&request)
+            .translate_text()
+            .text(text)
+            .source_language_code(source_lang)
+            .target_language_code(target_lang)
             .send()
-            .await?;
+            .await;
 
-        if response.status() == 429 {
-            error!("Rate limit exceeded for translation API");
-            return Err(TranslationError::RateLimitExceeded);
+        match result {
+            Ok(output) => {
+                let translated_text = output.translated_text;
+                info!(
+                    "Successfully translated {} chars to {} chars",
+                    text.len(),
+                    translated_text.len()
+                );
+                Ok(translated_text)
+            }
+            Err(err) => {
+                error!("Amazon Translate error: {}", err);
+                match err {
+                    aws_sdk_translate::error::SdkError::ServiceError(service_err) => {
+                        let err_msg = service_err.err().to_string();
+                        // Check if it's a throttling error by looking at the error message
+                        if err_msg.contains("throttl") || err_msg.contains("rate") {
+                            Err(TranslationError::RateLimitExceeded)
+                        } else {
+                            Err(TranslationError::TranslationFailed(err_msg))
+                        }
+                    }
+                    _ => Err(TranslationError::AwsError(err.to_string())),
+                }
+            }
         }
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            error!("Translation API error: {} - {}", status, error_text);
-            return Err(TranslationError::ApiError(format!(
-                "HTTP {status}: {error_text}"
-            )));
-        }
-
-        let translated: TranslateResponse = response.json().await?;
-        info!(
-            "Successfully translated {} chars to {}",
-            text.len(),
-            translated.translated_text.len()
-        );
-
-        Ok(translated.translated_text)
     }
 }
 

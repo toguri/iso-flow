@@ -208,21 +208,14 @@ impl Mutation {
 
         info!("Starting translation of pending news...");
 
-        // 環境変数から翻訳サービスの設定を取得
-        let api_url = std::env::var("LIBRE_TRANSLATE_URL")
-            .unwrap_or_else(|_| "https://libretranslate.com".to_string());
-        let api_key = std::env::var("LIBRE_TRANSLATE_API_KEY").ok();
-
         // 翻訳サービスを初期化（開発中はモックサービスを使用）
         let use_mock =
-            std::env::var("USE_MOCK_TRANSLATION").unwrap_or_else(|_| "true".to_string()) == "true";
+            std::env::var("USE_MOCK_TRANSLATION").unwrap_or_else(|_| "false".to_string()) == "true";
 
         let translation_service: Box<dyn crate::services::TranslationService> = if use_mock {
             Box::new(crate::services::MockTranslationService)
         } else {
-            Box::new(crate::services::LibreTranslateService::new(
-                api_url, api_key,
-            ))
+            Box::new(crate::services::AmazonTranslateService::new().await)
         };
 
         // 未翻訳のニュースを取得
