@@ -110,4 +110,101 @@ mod tests {
             "Plain text without tags"
         );
     }
+
+    #[test]
+    fn test_strip_html_tags_edge_cases() {
+        // ネストしたタグ
+        assert_eq!(
+            strip_html_tags("<div><p><span>Nested</span> <em>tags</em></p></div>"),
+            "Nested tags"
+        );
+
+        // 自己終了タグ
+        assert_eq!(
+            strip_html_tags("Text<br/>with<hr/>breaks"),
+            "Text with breaks"
+        );
+
+        // コメント
+        assert_eq!(
+            strip_html_tags("<!-- comment -->Text<!-- another comment -->"),
+            "Text"
+        );
+
+        // スクリプトタグ
+        assert_eq!(
+            strip_html_tags("<script>alert('test');</script>Safe text"),
+            "alert('test'); Safe text"
+        );
+
+        // スタイルタグ
+        assert_eq!(
+            strip_html_tags("<style>body { color: red; }</style>Content"),
+            "body { color: red; } Content"
+        );
+
+        // 壊れたHTML
+        assert_eq!(
+            strip_html_tags("<p>Unclosed paragraph"),
+            "Unclosed paragraph"
+        );
+
+        // 特殊なHTMLエンティティ
+        assert_eq!(
+            strip_html_tags("&#39;Single&#39; &quot;Double&quot; &nbsp;Space"),
+            "'Single' \"Double\" Space"
+        );
+
+        // 連続する空白の処理
+        assert_eq!(
+            strip_html_tags("<p>Multiple   spaces</p>\n\n<p>and   lines</p>"),
+            "Multiple spaces and lines"
+        );
+    }
+
+    #[test]
+    fn test_strip_html_tags_with_attributes() {
+        // 様々な属性を持つタグ
+        assert_eq!(
+            strip_html_tags("<div id='test' class=\"container\" data-value='123'>Content</div>"),
+            "Content"
+        );
+
+        // インラインスタイル
+        assert_eq!(
+            strip_html_tags("<p style='color: red; font-size: 14px;'>Styled text</p>"),
+            "Styled text"
+        );
+
+        // イベントハンドラ
+        assert_eq!(
+            strip_html_tags("<button onclick='doSomething()'>Click me</button>"),
+            "Click me"
+        );
+    }
+
+    #[test]
+    fn test_to_uppercase_unicode() {
+        // Unicode文字のテスト
+        assert_eq!(to_uppercase("こんにちは"), "こんにちは"); // 日本語は変化しない
+        assert_eq!(to_uppercase("café"), "CAFÉ");
+        assert_eq!(to_uppercase("αβγ"), "ΑΒΓ");
+    }
+
+    #[test]
+    fn test_to_lowercase_unicode() {
+        // Unicode文字のテスト
+        assert_eq!(to_lowercase("こんにちは"), "こんにちは"); // 日本語は変化しない
+        assert_eq!(to_lowercase("CAFÉ"), "café");
+        assert_eq!(to_lowercase("ΑΒΓ"), "αβγ");
+    }
+
+    #[test]
+    fn test_trim_various_whitespace() {
+        // 様々な空白文字
+        assert_eq!(trim("\r\ntext\r\n"), "text");
+        assert_eq!(trim("\u{00A0}text\u{00A0}"), "text"); // Non-breaking space is trimmed
+        assert_eq!(trim("\t\t\ttext\t\t\t"), "text");
+        assert_eq!(trim(" \n \r \t text \t \r \n "), "text");
+    }
 }

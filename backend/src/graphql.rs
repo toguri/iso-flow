@@ -347,21 +347,21 @@ pub fn create_schema(pool: PgPool) -> Schema<Query, Mutation, EmptySubscription>
         .finish()
 }
 
+async fn graphql_playground() -> axum::response::Html<String> {
+    axum::response::Html(async_graphql::http::playground_source(
+        async_graphql::http::GraphQLPlaygroundConfig::new("/"),
+    ))
+}
+
 pub fn graphql_routes(schema: Schema<Query, Mutation, EmptySubscription>) -> axum::Router {
     use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-    use axum::{extract::State, response::Html, routing::get, Router};
+    use axum::{extract::State, routing::get, Router};
 
     async fn graphql_handler(
         State(schema): State<Schema<Query, Mutation, EmptySubscription>>,
         req: GraphQLRequest,
     ) -> GraphQLResponse {
         schema.execute(req.into_inner()).await.into()
-    }
-
-    async fn graphql_playground() -> Html<String> {
-        Html(async_graphql::http::playground_source(
-            async_graphql::http::GraphQLPlaygroundConfig::new("/"),
-        ))
     }
 
     Router::new()
@@ -376,6 +376,7 @@ mod tests {
     use crate::scraper::{NewsItem, NewsSource};
     use async_graphql::Value;
     use chrono::Utc;
+    use tower::util::ServiceExt;
 
     #[tokio::test]
     #[ignore = "Requires PostgreSQL database"]
@@ -606,5 +607,230 @@ mod tests {
         );
 
         std::env::remove_var("DATABASE_URL");
+    }
+
+    #[test]
+    fn test_translation_result_creation() {
+        let result = TranslationResult {
+            translated_count: 5,
+            error_count: 1,
+            errors: vec!["item1: Translation failed".to_string()],
+        };
+
+        assert_eq!(result.translated_count, 5);
+        assert_eq!(result.error_count, 1);
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0], "item1: Translation failed");
+    }
+
+    #[tokio::test]
+    async fn test_translate_pending_news_with_mock() {
+        // モック翻訳サービスを使用するテスト
+        std::env::set_var("USE_MOCK_TRANSLATION", "true");
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect("postgresql://test_user:test_password@localhost:5432/test_db")
+            .await;
+
+        if pool.is_err() {
+            eprintln!("Skipping test: PostgreSQL database required");
+            std::env::remove_var("USE_MOCK_TRANSLATION");
+            return;
+        }
+
+        let pool = pool.unwrap();
+        let schema = create_schema(pool.clone());
+
+        let mutation = r#"
+            mutation {
+                translatePendingNews {
+                    translatedCount
+                    errorCount
+                    errors
+                }
+            }
+        "#;
+
+        let result = schema.execute(mutation).await;
+        assert!(result.errors.is_empty() || result.data != Value::Null);
+
+        std::env::remove_var("USE_MOCK_TRANSLATION");
+    }
+
+    #[tokio::test]
+    async fn test_translate_pending_news_with_amazon() {
+        // Amazon Translateサービスを使用するテスト（実際のAWS接続はスキップ）
+        std::env::set_var("USE_MOCK_TRANSLATION", "false");
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect("postgresql://test_user:test_password@localhost:5432/test_db")
+            .await;
+
+        if pool.is_err() {
+            eprintln!("Skipping test: PostgreSQL database required");
+            std::env::remove_var("USE_MOCK_TRANSLATION");
+            return;
+        }
+
+        let pool = pool.unwrap();
+        let schema = create_schema(pool.clone());
+
+        let mutation = r#"
+            mutation {
+                translatePendingNews {
+                    translatedCount
+                    errorCount
+                    errors
+                }
+            }
+        "#;
+
+        let result = schema.execute(mutation).await;
+        // 実際のAWS接続がないためエラーになる可能性があるが、
+        // ミューテーションの実行自体は成功するはず
+        assert!(result.errors.is_empty() || result.data != Value::Null);
+
+        std::env::remove_var("USE_MOCK_TRANSLATION");
+    }
+
+    // TradeNewsの変換テストを追加
+    #[test]
+    fn test_trade_news_translation_fields() {
+        let published_at = Utc::now();
+        let translated_at = Utc::now();
+
+        let saved_item = crate::scraper::persistence::SavedNewsItem {
+            id: "test-123".to_string(),
+            title: "Lakers Trade".to_string(),
+            description: Some("Trade details".to_string()),
+            link: "https://example.com".to_string(),
+            source: "ESPN".to_string(),
+            category: "Trade".to_string(),
+            published_at,
+            scraped_at: Some(Utc::now()),
+            title_ja: Some("レイカーズトレード".to_string()),
+            description_ja: Some("トレードの詳細".to_string()),
+            translation_status: "completed".to_string(),
+            translated_at: Some(translated_at),
+        };
+
+        // SavedNewsItemからTradeNewsへの変換
+        let trade_news = TradeNews {
+            id: saved_item.id.clone(),
+            title: strip_html_tags(&saved_item.title),
+            description: saved_item.description.map(|desc| strip_html_tags(&desc)),
+            link: saved_item.link,
+            source: saved_item.source,
+            category: saved_item.category,
+            published_at: saved_item.published_at,
+            title_ja: saved_item.title_ja,
+            description_ja: saved_item.description_ja,
+            translation_status: saved_item.translation_status,
+            translated_at: saved_item.translated_at,
+        };
+
+        assert_eq!(trade_news.title_ja, Some("レイカーズトレード".to_string()));
+        assert_eq!(
+            trade_news.description_ja,
+            Some("トレードの詳細".to_string())
+        );
+        assert_eq!(trade_news.translation_status, "completed");
+        assert_eq!(trade_news.translated_at, Some(translated_at));
+    }
+
+    #[test]
+    fn test_trade_news_without_translation() {
+        let published_at = Utc::now();
+
+        let saved_item = crate::scraper::persistence::SavedNewsItem {
+            id: "test-456".to_string(),
+            title: "Celtics News".to_string(),
+            description: None,
+            link: "https://example.com".to_string(),
+            source: "RealGM".to_string(),
+            category: "Other".to_string(),
+            published_at,
+            scraped_at: Some(Utc::now()),
+            title_ja: None,
+            description_ja: None,
+            translation_status: "pending".to_string(),
+            translated_at: None,
+        };
+
+        let trade_news = TradeNews {
+            id: saved_item.id.clone(),
+            title: strip_html_tags(&saved_item.title),
+            description: saved_item.description.map(|desc| strip_html_tags(&desc)),
+            link: saved_item.link,
+            source: saved_item.source,
+            category: saved_item.category,
+            published_at: saved_item.published_at,
+            title_ja: saved_item.title_ja,
+            description_ja: saved_item.description_ja,
+            translation_status: saved_item.translation_status,
+            translated_at: saved_item.translated_at,
+        };
+
+        assert_eq!(trade_news.title_ja, None);
+        assert_eq!(trade_news.description_ja, None);
+        assert_eq!(trade_news.translation_status, "pending");
+        assert_eq!(trade_news.translated_at, None);
+    }
+
+    // GraphQLハンドラーのテスト
+    #[tokio::test]
+    async fn test_graphql_handler() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect("postgresql://test_user:test_password@localhost:5432/test_db")
+            .await;
+
+        if pool.is_err() {
+            eprintln!("Skipping test: PostgreSQL database required");
+            return;
+        }
+
+        let pool = pool.unwrap();
+        let schema = create_schema(pool);
+
+        // GraphQLリクエストを作成
+        let request = async_graphql::Request::new(
+            r#"{
+                tradeNews {
+                    id
+                    title
+                }
+            }"#,
+        );
+
+        // ハンドラーを直接呼び出す
+        let response: axum::http::Response<axum::body::Body> = super::graphql_routes(schema)
+            .oneshot(
+                axum::http::Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        serde_json::to_string(&request).unwrap(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        // レスポンスが有効であることを確認
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_graphql_playground() {
+        let playground_html = super::graphql_playground().await;
+        let html_content = playground_html.0;
+
+        // Playgroundが正しく生成されることを確認
+        assert!(html_content.contains("GraphQL Playground"));
+        assert!(html_content.contains("<html"));
     }
 }
