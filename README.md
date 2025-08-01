@@ -31,13 +31,40 @@ iso-flow/
 ### フロントエンド
 - Kotlin/JS
 - Compose for Web
-- Apollo GraphQL Client
+- Ktor Client（GraphQL通信）
 
 ### バックエンド
 - Rust
 - Axum (Webフレームワーク)
 - async-graphql
+- SQLx (PostgreSQL)
 - reqwest (HTTPクライアント)
+
+### インフラ（本番環境）
+- **コンピュート**: ECS Fargate
+- **データベース**: RDS PostgreSQL
+- **翻訳**: Amazon Translate
+- **非同期処理**: Step Functions + Lambda
+- **キュー**: Amazon SQS
+- **CDN**: CloudFront
+- **ロードバランサー**: ALB
+
+### 翻訳処理アーキテクチャ
+```
+RSSスクレイピング
+    ↓
+PostgreSQL（translation_status='pending'）
+    ↓
+SQS（新規記事通知）
+    ↓
+Step Functions（ワークフロー管理）
+    ↓
+Lambda（翻訳実行）
+    ↓
+Amazon Translate
+    ↓
+PostgreSQL（translation_status='completed'）
+```
 
 ## 📖 ドキュメント
 

@@ -68,6 +68,10 @@ clap = { version = "4.5.41", features = ["derive"] }
 tokio-cron-scheduler = "0.11"
 uuid = { version = "1.11", features = ["v4"] }
 
+# AWS SDK
+aws-config = "1.5"
+aws-sdk-translate = "1.40"
+
 [[bin]]
 name = "scrape"
 path = "src/bin/scrape.rs"

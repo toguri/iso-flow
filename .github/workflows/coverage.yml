@@ -17,6 +17,9 @@ jobs:
   coverage:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: backend
@@ -74,9 +77,16 @@ jobs:
         cargo install sqlx-cli --no-default-features --features postgres
         sqlx migrate run --source migrations_postgres
     
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+
     - name: Generate coverage report
       env:
         DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
       run: |
         echo "🧪 Running tests with coverage..."
         cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored

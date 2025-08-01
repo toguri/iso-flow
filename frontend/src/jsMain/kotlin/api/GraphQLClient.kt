@@ -70,6 +70,10 @@ class GraphQLClient {
                     source
                     publishedAt
                     category
+                    titleJa
+                    descriptionJa
+                    translationStatus
+                    translatedAt
                 }
             }
         """.trimIndent()
@@ -100,6 +104,10 @@ class GraphQLClient {
                     source
                     publishedAt
                     category
+                    titleJa
+                    descriptionJa
+                    translationStatus
+                    translatedAt
                 }
             }
         """.trimIndent()

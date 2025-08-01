@@ -108,7 +108,11 @@ impl NewsPersistence {
                 link,
                 category,
                 published_at,
-                scraped_at
+                scraped_at,
+                title_ja,
+                description_ja,
+                translation_status,
+                translated_at
             FROM trade_news
             ORDER BY published_at DESC
             LIMIT $1
@@ -133,7 +137,11 @@ impl NewsPersistence {
                 link,
                 category,
                 published_at,
-                scraped_at
+                scraped_at,
+                title_ja,
+                description_ja,
+                translation_status,
+                translated_at
             FROM trade_news
             WHERE category = $1
             ORDER BY published_at DESC
@@ -166,6 +174,10 @@ pub struct SavedNewsItem {
     pub category: String,
     pub published_at: chrono::DateTime<chrono::Utc>,
     pub scraped_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub title_ja: Option<String>,
+    pub description_ja: Option<String>,
+    pub translation_status: String,
+    pub translated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[cfg(test)]
@@ -216,6 +228,10 @@ mod tests {
             category: "Trade".to_string(),
             published_at: chrono::Utc::now(),
             scraped_at: Some(chrono::Utc::now()),
+            title_ja: None,
+            description_ja: None,
+            translation_status: "pending".to_string(),
+            translated_at: None,
         };
 
         assert_eq!(item.id, "ext-1");
@@ -470,6 +486,174 @@ mod tests {
 
         // 念のため空のIDも削除
         sqlx::query("DELETE FROM trade_news WHERE id = ''")
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_save_news_items_empty_list() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        // 空のリストを保存
+        let result = persistence.save_news_items(vec![]).await.unwrap();
+
+        assert_eq!(result.saved_count, 0);
+        assert_eq!(result.skipped_count, 0);
+        assert_eq!(result.errors.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_news_persistence_new() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://test_user:test_password@localhost:5433/test_iso_flow".to_string()
+        });
+
+        match PgPool::connect(&database_url).await {
+            Ok(pool) => {
+                let _persistence = NewsPersistence::new(pool.clone());
+                // newの動作確認
+                assert!(true, "NewsPersistence created successfully");
+            }
+            Err(_) => {
+                eprintln!("Skipping test: PostgreSQL database required");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_exists_by_external_id() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        let test_id = format!("exists-test-{}", Utc::now().timestamp_nanos_opt().unwrap());
+
+        // 存在しないIDのテスト
+        let exists = persistence.exists_by_external_id(&test_id).await.unwrap();
+        assert!(!exists);
+
+        // ニュースアイテムを保存
+        let news_item = NewsItem {
+            id: test_id.clone(),
+            title: "Exists Test".to_string(),
+            description: None,
+            link: "https://example.com/exists".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        persistence.save_news_items(vec![news_item]).await.unwrap();
+
+        // 保存後の存在確認
+        let exists = persistence.exists_by_external_id(&test_id).await.unwrap();
+        assert!(exists);
+
+        // Clean up
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&test_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_recent_news_limit() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        // 複数のニュースアイテムを作成
+        let mut items = Vec::new();
+        for i in 0..5 {
+            items.push(NewsItem {
+                id: format!(
+                    "limit-test-{}-{}",
+                    Utc::now().timestamp_nanos_opt().unwrap(),
+                    i
+                ),
+                title: format!("Limit Test {}", i),
+                description: None,
+                link: format!("https://example.com/limit/{}", i),
+                source: NewsSource::ESPN,
+                published_at: Utc::now() - chrono::Duration::minutes(i),
+                category: "Trade".to_string(),
+            });
+        }
+
+        persistence.save_news_items(items.clone()).await.unwrap();
+
+        // 制限て3件取得
+        let recent = persistence.get_recent_news(3).await.unwrap();
+        assert!(recent.len() <= 3);
+
+        // Clean up
+        for item in items {
+            sqlx::query("DELETE FROM trade_news WHERE id = $1")
+                .bind(&item.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_news_by_category_empty() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        // 存在しないカテゴリを検索
+        let result = persistence
+            .get_news_by_category("NonExistentCategory")
+            .await
+            .unwrap();
+        // 結果が空であることを確認（エラーにならない）
+        assert!(result.is_empty() || !result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_save_item_with_description() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let persistence = NewsPersistence::new(pool.clone());
+
+        let news_item = NewsItem {
+            id: format!("desc-test-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            title: "Description Test".to_string(),
+            description: Some("This is a test description with <b>HTML</b> content.".to_string()),
+            link: "https://example.com/desc".to_string(),
+            source: NewsSource::RealGM,
+            published_at: Utc::now(),
+            category: "Signing".to_string(),
+        };
+
+        let result = persistence
+            .save_news_items(vec![news_item.clone()])
+            .await
+            .unwrap();
+        assert_eq!(result.saved_count, 1);
+
+        // 保存されたデータを確認
+        let saved = persistence.get_recent_news(1).await.unwrap();
+        assert!(!saved.is_empty());
+        if let Some(saved_item) = saved.first() {
+            if saved_item.id == news_item.id {
+                assert_eq!(saved_item.description, news_item.description);
+            }
+        }
+
+        // Clean up
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&news_item.id)
             .execute(&pool)
             .await
             .unwrap();

@@ -21,7 +21,7 @@ fun NewsCard(newsItem: NewsItem) {
                     attr("target", "_blank")
                     attr("rel", "noopener noreferrer")
                 }) {
-                    Text(newsItem.title)
+                    Text(newsItem.titleJa ?: newsItem.title)
                 }
             }
             Span(attrs = {
@@ -35,7 +35,8 @@ fun NewsCard(newsItem: NewsItem) {
             P(attrs = {
                 classes("news-card-description")
             }) {
-                Text(desc.take(150) + if (desc.length > 150) "..." else "")
+                val displayDesc = newsItem.descriptionJa ?: desc
+                Text(displayDesc.take(150) + if (displayDesc.length > 150) "..." else "")
             }
         }
         
@@ -48,9 +49,16 @@ fun NewsCard(newsItem: NewsItem) {
                 Text(formatDate(newsItem.publishedAt))
             }
             Span(attrs = {
-                classes("news-card-source")
+                classes("news-card-meta")
             }) {
                 Text("Source: ${newsItem.source}")
+                if (newsItem.translationStatus == "completed") {
+                    Span(attrs = {
+                        classes("translation-badge")
+                    }) {
+                        Text(" 🇯🇵")
+                    }
+                }
             }
         }
     }
@@ -172,8 +180,16 @@ object NewsCardStyles : StyleSheet() {
             fontWeight(500)
         }
         
-        ".news-card-source" style {
+        ".news-card-meta" style {
             fontStyle("italic")
+            display(DisplayStyle.Flex)
+            alignItems(AlignItems.Center)
+            gap(0.5.em)
+        }
+        
+        ".translation-badge" style {
+            fontSize(0.9.em)
+            opacity(0.8)
         }
     }
 }
