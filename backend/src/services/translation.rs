@@ -98,73 +98,116 @@ impl TranslationService for AmazonTranslateService {
     }
 }
 
-// モックサービス（テスト用）
-pub struct MockTranslationService;
-
-#[async_trait]
-impl TranslationService for MockTranslationService {
-    async fn translate(
-        &self,
-        text: &str,
-        _source_lang: &str,
-        _target_lang: &str,
-    ) -> Result<String, TranslationError> {
-        // シンプルなモック翻訳（実際の翻訳は行わない）
-        Ok(format!("[翻訳済み] {text}"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_mock_translation_service() {
-        let service = MockTranslationService;
+    async fn test_amazon_translate_real_connection() {
+        // 実際のAWS Translateサービスを使用
+        let service = AmazonTranslateService::new().await;
+
+        // 簡単な英語から日本語への翻訳
         let result = service.translate("Hello World", "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "[翻訳済み] Hello World");
+        let translated = result.unwrap();
+
+        // 実際の翻訳結果を確認（「こんにちは世界」または類似の翻訳）
+        assert!(!translated.is_empty());
+        assert!(translated.contains("世界") || translated.contains("ワールド"));
     }
 
     #[tokio::test]
-    async fn test_mock_translation_service_with_japanese() {
-        let service = MockTranslationService;
+    async fn test_amazon_translate_japanese_to_english() {
+        let service = AmazonTranslateService::new().await;
+
+        // 日本語から英語への翻訳
         let result = service.translate("レイカーズがトレード", "ja", "en").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "[翻訳済み] レイカーズがトレード");
+        let translated = result.unwrap();
+
+        // 実際の翻訳結果を確認
+        assert!(!translated.is_empty());
+        assert!(
+            translated.to_lowercase().contains("lakers")
+                || translated.to_lowercase().contains("trade")
+        );
     }
 
     #[tokio::test]
-    async fn test_empty_text_translation() {
-        let service = MockTranslationService;
+    async fn test_amazon_translate_empty_text() {
+        let service = AmazonTranslateService::new().await;
+
+        // 空のテキストの処理を確認
         let result = service.translate("", "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "[翻訳済み] ");
-    }
+        assert_eq!(result.unwrap(), "");
 
-    #[tokio::test]
-    async fn test_mock_translation_with_whitespace() {
-        let service = MockTranslationService;
-        let result = service.translate("  \n\t  ", "en", "ja").await;
+        // 空白のみのテキスト
+        let result = service.translate("   ", "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "[翻訳済み]   \n\t  ");
+        assert_eq!(result.unwrap(), "");
     }
 
     #[tokio::test]
-    async fn test_mock_translation_long_text() {
-        let service = MockTranslationService;
+    async fn test_amazon_translate_with_special_characters() {
+        let service = AmazonTranslateService::new().await;
+
+        // 特殊文字を含むテキストの翻訳
+        let text = "Lakers' \"Big Trade\" & More!";
+        let result = service.translate(text, "en", "ja").await;
+        assert!(result.is_ok());
+        let translated = result.unwrap();
+
+        // 翻訳結果が返されることを確認
+        assert!(!translated.is_empty());
+        assert!(translated.len() > 5); // 実際の翻訳が返される
+    }
+
+    #[tokio::test]
+    async fn test_amazon_translate_long_text() {
+        let service = AmazonTranslateService::new().await;
+
+        // 長いテキストの翻訳
         let long_text = "The Los Angeles Lakers have acquired a star player in a blockbuster trade deal. This move is expected to significantly improve their championship chances.";
         let result = service.translate(long_text, "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), format!("[翻訳済み] {}", long_text));
+        let translated = result.unwrap();
+
+        // 翻訳結果の検証
+        assert!(!translated.is_empty());
+        assert!(translated.contains("レイカーズ") || translated.contains("Lakers"));
+        assert!(translated.len() > 50); // 実質的な翻訳が返される
     }
 
     #[tokio::test]
-    async fn test_amazon_translate_service_new() {
-        // AWS SDKの初期化テスト
-        let _service = AmazonTranslateService::new().await;
-        // 初期化が成功すればOK（実際のAWS接続は不要）
-        assert!(true);
+    async fn test_amazon_translate_service_initialization() {
+        // 実際のAWS SDKの初期化テスト
+        let service = AmazonTranslateService::new().await;
+
+        // サービスが正しく初期化されたことを確認するため、簡単な翻訳を実行
+        let result = service.translate("test", "en", "ja").await;
+        // AWS認証が設定されていれば成功、なければエラー
+        // どちらの場合も初期化自体は成功している
+        assert!(result.is_ok() || matches!(result, Err(TranslationError::AwsError(_))));
+    }
+
+    #[tokio::test]
+    async fn test_amazon_translate_invalid_language_code() {
+        let service = AmazonTranslateService::new().await;
+
+        // 無効な言語コードでエラーを発生させる
+        let result = service.translate("Hello", "invalid", "ja").await;
+        assert!(result.is_err());
+
+        match result {
+            Err(TranslationError::TranslationFailed(msg))
+            | Err(TranslationError::AwsError(msg)) => {
+                // AWS Translateからのエラーメッセージを確認
+                assert!(!msg.is_empty());
+            }
+            _ => panic!("Expected translation error"),
+        }
     }
 
     #[tokio::test]
@@ -179,113 +222,120 @@ mod tests {
         assert_eq!(error.to_string(), "Rate limit exceeded");
     }
 
-    // Amazon Translateのエラーハンドリングテスト用のモック
-    #[derive(Clone)]
-    struct MockTranslateClient;
+    #[tokio::test]
+    async fn test_amazon_translate_html_content() {
+        let service = AmazonTranslateService::new().await;
 
-    #[async_trait]
-    trait TranslateClientTrait: Send + Sync {
-        async fn translate(&self, text: &str) -> Result<String, String>;
+        // HTMLタグを含むテキストの翻訳
+        let html_text = "<p>Lakers win the championship</p>";
+        let result = service.translate(html_text, "en", "ja").await;
+        assert!(result.is_ok());
+        let translated = result.unwrap();
+
+        // AWS TranslateはHTMLタグを保持するかどうか確認
+        assert!(!translated.is_empty());
+        // 翻訳結果に「レイカーズ」または「Lakers」が含まれる
+        assert!(translated.contains("レイカーズ") || translated.contains("Lakers"));
     }
 
-    struct TestableAmazonTranslateService<T: TranslateClientTrait> {
-        client: T,
+    #[tokio::test]
+    async fn test_amazon_translate_multiple_sentences() {
+        let service = AmazonTranslateService::new().await;
+
+        // 複数の文を含むテキスト
+        let text = "The Lakers won. The Celtics lost. It was a great game.";
+        let result = service.translate(text, "en", "ja").await;
+        assert!(result.is_ok());
+        let translated = result.unwrap();
+
+        // 翻訳が正しく完了したことを確認
+        assert!(!translated.is_empty());
+        assert!(translated.len() > 20); // 適切な長さの翻訳が返される
     }
 
-    #[async_trait]
-    impl<T: TranslateClientTrait> TranslationService for TestableAmazonTranslateService<T> {
-        async fn translate(
-            &self,
-            text: &str,
-            _source_lang: &str,
-            _target_lang: &str,
-        ) -> Result<String, TranslationError> {
-            if text.trim().is_empty() {
-                return Ok(String::new());
-            }
+    #[tokio::test]
+    async fn test_amazon_translate_mixed_content() {
+        let service = AmazonTranslateService::new().await;
 
-            match self.client.translate(text).await {
-                Ok(translated) => Ok(translated),
-                Err(err) => {
-                    if err.contains("throttl") || err.contains("rate") {
-                        Err(TranslationError::RateLimitExceeded)
-                    } else {
-                        Err(TranslationError::TranslationFailed(err))
-                    }
-                }
-            }
+        // 数字、記号、英語を含む混合コンテンツ
+        let mixed_text = "Lakers scored 120 points! Amazing performance @ Staples Center.";
+        let result = service.translate(mixed_text, "en", "ja").await;
+        assert!(result.is_ok());
+        let translated = result.unwrap();
+
+        // 数字が保持されていることを確認
+        assert!(translated.contains("120"));
+        assert!(!translated.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_amazon_translate_unicode_emoji() {
+        let service = AmazonTranslateService::new().await;
+
+        // 絵文字を含むテキスト
+        let emoji_text = "Lakers won! 🏀 🏆";
+        let result = service.translate(emoji_text, "en", "ja").await;
+        assert!(result.is_ok());
+        let translated = result.unwrap();
+
+        // 翻訳が成功したことを確認
+        assert!(!translated.is_empty());
+        // 絵文字が保持されるか、または適切に処理される
+        assert!(translated.len() > 5);
+    }
+
+    #[tokio::test]
+    async fn test_amazon_translate_batch_requests() {
+        let service = AmazonTranslateService::new().await;
+
+        // 複数の翻訳リクエストを連続で実行
+        let texts = vec![
+            "Hello World",
+            "Good morning",
+            "Thank you",
+            "See you later",
+            "Welcome",
+        ];
+
+        for text in texts {
+            let result = service.translate(text, "en", "ja").await;
+            assert!(result.is_ok(), "Failed to translate: {}", text);
+            let translated = result.unwrap();
+            assert!(!translated.is_empty());
+
+            // 連続リクエスト間に少し待機（レート制限回避）
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
     }
 
-    #[async_trait]
-    impl TranslateClientTrait for MockTranslateClient {
-        async fn translate(&self, text: &str) -> Result<String, String> {
-            if text.contains("error") {
-                Err("Translation failed".to_string())
-            } else if text.contains("throttle") {
-                Err("Request throttled".to_string())
-            } else {
-                Ok(format!("Translated: {}", text))
-            }
-        }
-    }
-
     #[tokio::test]
-    async fn test_amazon_translate_empty_text() {
-        let client = MockTranslateClient;
-        let service = TestableAmazonTranslateService { client };
+    async fn test_amazon_translate_trademark_symbols() {
+        let service = AmazonTranslateService::new().await;
 
-        let result = service.translate("", "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "");
-
-        let result = service.translate("   ", "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "");
-    }
-
-    #[tokio::test]
-    async fn test_amazon_translate_error_handling() {
-        let client = MockTranslateClient;
-        let service = TestableAmazonTranslateService { client };
-
-        let result = service.translate("error case", "en", "ja").await;
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            TranslationError::TranslationFailed(_)
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_amazon_translate_rate_limit() {
-        let client = MockTranslateClient;
-        let service = TestableAmazonTranslateService { client };
-
-        let result = service.translate("throttle test", "en", "ja").await;
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            TranslationError::RateLimitExceeded
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_mock_translation_special_characters() {
-        let service = MockTranslationService;
-        let special_text = "NBA™ News: Lakers' \"Big Trade\" & More! 🏀";
+        // 商標記号を含むテキスト
+        let special_text = "NBA™ announces new rules";
         let result = service.translate(special_text, "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), format!("[翻訳済み] {}", special_text));
+        let translated = result.unwrap();
+
+        // 翻訳が成功したことを確認
+        assert!(!translated.is_empty());
+        assert!(translated.contains("NBA") || translated.contains("ＮＢＡ"));
     }
 
     #[tokio::test]
-    async fn test_mock_translation_unicode() {
-        let service = MockTranslationService;
-        let unicode_text = "こんにちは！🇯🇵 NBA ニュース 📰";
+    async fn test_amazon_translate_japanese_mixed_content() {
+        let service = AmazonTranslateService::new().await;
+
+        // 日本語と英語が混在するテキスト
+        let unicode_text = "レイカーズLakersが優勝";
         let result = service.translate(unicode_text, "ja", "en").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), format!("[翻訳済み] {}", unicode_text));
+        let translated = result.unwrap();
+
+        // 翻訳結果に"Lakers"が含まれる
+        assert!(!translated.is_empty());
+        assert!(translated.contains("Lakers") || translated.contains("lakers"));
     }
 
     #[tokio::test]
@@ -297,136 +347,68 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_mock_translation_html_entities() {
-        let service = MockTranslationService;
+    async fn test_amazon_translate_html_entities() {
+        let service = AmazonTranslateService::new().await;
+
+        // HTMLエンティティを含むテキスト
         let html_text = "Lakers &amp; Celtics: Trade &quot;News&quot;";
         let result = service.translate(html_text, "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), format!("[翻訳済み] {}", html_text));
+        let translated = result.unwrap();
+
+        // 翻訳が成功したことを確認
+        assert!(!translated.is_empty());
+        assert!(translated.contains("レイカーズ") || translated.contains("Lakers"));
+        assert!(translated.contains("セルティックス") || translated.contains("Celtics"));
     }
 
     #[tokio::test]
-    async fn test_testable_service_successful_translation() {
-        let client = MockTranslateClient;
-        let service = TestableAmazonTranslateService { client };
+    async fn test_amazon_translate_very_long_text() {
+        let service = AmazonTranslateService::new().await;
 
-        let result = service.translate("Hello World", "en", "ja").await;
+        // AWS Translateの文字数制限に近い長いテキスト（5000文字以下）
+        let long_paragraph =
+            "The Los Angeles Lakers are one of the most successful basketball teams. ".repeat(50);
+        let result = service.translate(&long_paragraph, "en", "ja").await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Translated: Hello World");
+        let translated = result.unwrap();
+
+        // 長いテキストが正しく翻訳される
+        assert!(!translated.is_empty());
+        assert!(translated.len() > 100); // 十分な長さの翻訳が返される
     }
 
     #[tokio::test]
-    async fn test_very_long_text() {
-        let service = MockTranslationService;
-        let very_long_text = "Lakers ".repeat(1000); // 6000文字以上
-        let result = service.translate(&very_long_text, "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), format!("[翻訳済み] {}", very_long_text));
-    }
+    async fn test_amazon_translate_supported_languages() {
+        let service = AmazonTranslateService::new().await;
 
-    #[tokio::test]
-    async fn test_multiple_language_codes() {
-        let service = MockTranslationService;
-
-        // 様々な言語コードでテスト
+        // AWS Translateがサポートする言語ペアをテスト
         let test_cases = vec![
-            ("en", "ja"),
-            ("ja", "en"),
-            ("es", "ja"),
-            ("fr", "en"),
-            ("de", "ja"),
+            ("Hello", "en", "ja"),
+            ("こんにちは", "ja", "en"),
+            ("Hello", "en", "es"),
+            ("Bonjour", "fr", "en"),
+            ("Hallo", "de", "ja"),
         ];
 
-        for (source, target) in test_cases {
-            let result = service.translate("Test", source, target).await;
-            assert!(result.is_ok());
-            assert_eq!(result.unwrap(), "[翻訳済み] Test");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_translation_with_newlines() {
-        let service = MockTranslationService;
-        let multiline_text = "Line 1\nLine 2\n\nLine 4";
-        let result = service.translate(multiline_text, "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), format!("[翻訳済み] {}", multiline_text));
-    }
-
-    // 追加のモックテスト用クライアント
-    #[derive(Clone)]
-    struct ExtendedMockTranslateClient {
-        should_fail: bool,
-        error_type: String,
-    }
-
-    #[async_trait]
-    impl TranslateClientTrait for ExtendedMockTranslateClient {
-        async fn translate(&self, text: &str) -> Result<String, String> {
-            if self.should_fail {
-                Err(self.error_type.clone())
-            } else {
-                // 実際の翻訳をシミュレート
-                match text {
-                    "Hello" => Ok("こんにちは".to_string()),
-                    "Goodbye" => Ok("さようなら".to_string()),
-                    _ => Ok(format!("翻訳: {}", text)),
-                }
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_extended_mock_success() {
-        let client = ExtendedMockTranslateClient {
-            should_fail: false,
-            error_type: String::new(),
-        };
-        let service = TestableAmazonTranslateService { client };
-
-        let result = service.translate("Hello", "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "こんにちは");
-    }
-
-    #[tokio::test]
-    async fn test_extended_mock_various_errors() {
-        let test_cases = vec![
-            (
-                "Generic error",
-                TranslationError::TranslationFailed("Generic error".to_string()),
-            ),
-            ("rate limit", TranslationError::RateLimitExceeded),
-            ("throttled", TranslationError::RateLimitExceeded),
-        ];
-
-        for (error_msg, expected_error) in test_cases {
-            let client = ExtendedMockTranslateClient {
-                should_fail: true,
-                error_type: error_msg.to_string(),
-            };
-            let service = TestableAmazonTranslateService { client };
-
-            let result = service.translate("Test", "en", "ja").await;
-            assert!(result.is_err());
-
-            match (result.unwrap_err(), expected_error) {
-                (TranslationError::RateLimitExceeded, TranslationError::RateLimitExceeded) => {}
-                (
-                    TranslationError::TranslationFailed(a),
-                    TranslationError::TranslationFailed(b),
-                ) => {
-                    assert_eq!(a, b);
-                }
-                _ => panic!("Unexpected error type"),
-            }
+        for (text, source, target) in test_cases {
+            let result = service.translate(text, source, target).await;
+            assert!(
+                result.is_ok(),
+                "Failed to translate {} from {} to {}",
+                text,
+                source,
+                target
+            );
+            let translated = result.unwrap();
+            assert!(!translated.is_empty());
         }
     }
 
     #[test]
     fn test_translation_service_trait_is_send_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
-        assert_send_sync::<MockTranslationService>();
+        assert_send_sync::<AmazonTranslateService>();
         assert_send_sync::<Box<dyn TranslationService>>();
     }
 
@@ -443,37 +425,6 @@ mod tests {
             let error_string = error.to_string();
             assert!(!error_string.is_empty());
         }
-    }
-
-    #[tokio::test]
-    async fn test_amazon_translate_service_empty_trimmed_text() {
-        // AmazonTranslateServiceの空白文字の処理をテスト
-        struct EmptyTextMockClient;
-
-        #[async_trait]
-        impl TranslateClientTrait for EmptyTextMockClient {
-            async fn translate(&self, _text: &str) -> Result<String, String> {
-                panic!("Should not be called for empty text");
-            }
-        }
-
-        let client = EmptyTextMockClient;
-        let service = TestableAmazonTranslateService { client };
-
-        // 空文字
-        let result = service.translate("", "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "");
-
-        // 空白のみ
-        let result = service.translate("   ", "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "");
-
-        // タブと改行のみ
-        let result = service.translate("\t\n", "en", "ja").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "");
     }
 
     #[tokio::test]
@@ -494,30 +445,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_mock_service_with_all_whitespace_types() {
-        let service = MockTranslationService;
-
-        // 様々な空白文字の組み合わせ
-        let whitespace_tests = vec![
-            " ",        // スペース
-            "\t",       // タブ
-            "\n",       // 改行
-            "\r",       // キャリッジリターン
-            "\r\n",     // Windows改行
-            " \t \n ",  // 混合
-            "\u{00A0}", // ノンブレーキングスペース
-            "\u{2003}", // emスペース
-        ];
-
-        for ws in whitespace_tests {
-            let result = service.translate(ws, "en", "ja").await;
-            assert!(result.is_ok());
-            assert_eq!(result.unwrap(), format!("[翻訳済み] {}", ws));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_concurrent_translations() {
+    async fn test_amazon_translate_concurrent_requests() {
         // 並行実行のテスト
         let texts = vec!["Hello", "World", "Test", "Concurrent"];
 
@@ -525,7 +453,7 @@ mod tests {
 
         for text in texts {
             let handle = tokio::spawn(async move {
-                let service = MockTranslationService;
+                let service = AmazonTranslateService::new().await;
                 service.translate(text, "en", "ja").await
             });
             handles.push(handle);
@@ -535,7 +463,8 @@ mod tests {
         for handle in handles {
             let result = handle.await.unwrap();
             assert!(result.is_ok());
-            assert!(result.unwrap().starts_with("[翻訳済み]"));
+            let translated = result.unwrap();
+            assert!(!translated.is_empty());
         }
     }
 
@@ -544,64 +473,6 @@ mod tests {
         // TranslationErrorがSend + Syncであることを確認
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<TranslationError>();
-    }
-
-    #[tokio::test]
-    async fn test_edge_case_language_codes() {
-        let service = MockTranslationService;
-
-        // エッジケースの言語コード
-        let edge_cases = vec![
-            ("", "ja"),         // 空のソース言語
-            ("en", ""),         // 空のターゲット言語
-            ("xxx", "yyy"),     // 無効な言語コード
-            ("EN", "JA"),       // 大文字
-            ("en-US", "ja-JP"), // リージョンコード付き
-        ];
-
-        for (source, target) in edge_cases {
-            let result = service.translate("Test", source, target).await;
-            assert!(result.is_ok());
-            assert_eq!(result.unwrap(), "[翻訳済み] Test");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_testable_service_edge_cases() {
-        // 境界値テスト用のモッククライアント
-        struct EdgeCaseMockClient;
-
-        #[async_trait]
-        impl TranslateClientTrait for EdgeCaseMockClient {
-            async fn translate(&self, text: &str) -> Result<String, String> {
-                match text {
-                    "rate_limit" => Err("Request rate exceeded".to_string()),
-                    "throttling" => Err("Request throttling applied".to_string()),
-                    "unknown" => Err("Unknown error occurred".to_string()),
-                    _ => Ok(format!("翻訳完了: {}", text)),
-                }
-            }
-        }
-
-        let client = EdgeCaseMockClient;
-        let service = TestableAmazonTranslateService { client };
-
-        // レート制限（"rate"を含む）
-        let result = service.translate("rate_limit", "en", "ja").await;
-        assert!(matches!(result, Err(TranslationError::RateLimitExceeded)));
-
-        // スロットリング（"throttl"を含む）
-        let result = service.translate("throttling", "en", "ja").await;
-        assert!(matches!(result, Err(TranslationError::RateLimitExceeded)));
-
-        // その他のエラー
-        let result = service.translate("unknown", "en", "ja").await;
-        match result {
-            Err(TranslationError::TranslationFailed(msg)) => {
-                assert_eq!(msg, "Unknown error occurred");
-            }
-            _ => panic!("Expected TranslationFailed error"),
-        }
     }
 
     #[tokio::test]
@@ -615,90 +486,5 @@ mod tests {
         let error2 = TranslationError::RateLimitExceeded;
         let debug2 = format!("{:?}", error2);
         assert!(debug2.contains("RateLimitExceeded"));
-    }
-
-    #[tokio::test]
-    async fn test_translation_with_mixed_content() {
-        let service = MockTranslationService;
-
-        // 様々なコンテンツを含むテキスト
-        let mixed_content_tests = vec![
-            "Hello\nWorld",             // 改行を含む
-            "Test\tWith\tTabs",         // タブを含む
-            "Mixed 123 数字 456",       // 数字と日本語
-            "Special @#$% Characters",  // 特殊文字
-            "Emoji 😀 Test 🏀",         // 絵文字
-            "<html>Tagged</html>",      // HTMLタグ
-            "\"Quoted\" Text",          // 引用符
-            "Mixed\r\nLine\r\nEndings", // 複数の改行タイプ
-        ];
-
-        for content in mixed_content_tests {
-            let result = service.translate(content, "en", "ja").await;
-            assert!(result.is_ok());
-            assert_eq!(result.unwrap(), format!("[翻訳済み] {}", content));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_translation_service_reusability() {
-        // サービスの再利用性テスト
-        let service = MockTranslationService;
-
-        // 同じサービスインスタンスで複数回翻訳
-        for i in 0..5 {
-            let text = format!("Test {}", i);
-            let result = service.translate(&text, "en", "ja").await;
-            assert!(result.is_ok());
-            assert_eq!(result.unwrap(), format!("[翻訳済み] {}", text));
-        }
-    }
-
-    #[tokio::test]
-    async fn test_aws_specific_error_patterns() {
-        // AWS特有のエラーパターンテスト
-        struct AwsErrorMockClient;
-
-        #[async_trait]
-        impl TranslateClientTrait for AwsErrorMockClient {
-            async fn translate(&self, text: &str) -> Result<String, String> {
-                match text {
-                    "throttle_test" => Err("Request throttled by AWS".to_string()),
-                    "rate_test" => Err("Request rate exceeded for this operation".to_string()),
-                    "auth_test" => Err("Authentication failed".to_string()),
-                    "service_test" => Err("Service temporarily unavailable".to_string()),
-                    _ => Ok("Translated".to_string()),
-                }
-            }
-        }
-
-        let client = AwsErrorMockClient;
-        let service = TestableAmazonTranslateService { client };
-
-        // スロットリングエラー
-        let result = service.translate("throttle_test", "en", "ja").await;
-        assert!(matches!(result, Err(TranslationError::RateLimitExceeded)));
-
-        // レート制限エラー
-        let result = service.translate("rate_test", "en", "ja").await;
-        assert!(matches!(result, Err(TranslationError::RateLimitExceeded)));
-
-        // 認証エラー
-        let result = service.translate("auth_test", "en", "ja").await;
-        match result {
-            Err(TranslationError::TranslationFailed(msg)) => {
-                assert_eq!(msg, "Authentication failed");
-            }
-            _ => panic!("Expected TranslationFailed error"),
-        }
-
-        // サービスエラー
-        let result = service.translate("service_test", "en", "ja").await;
-        match result {
-            Err(TranslationError::TranslationFailed(msg)) => {
-                assert_eq!(msg, "Service temporarily unavailable");
-            }
-            _ => panic!("Expected TranslationFailed error"),
-        }
     }
 }

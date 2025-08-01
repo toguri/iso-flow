@@ -1,5 +1,3 @@
 pub mod translation;
 
-pub use translation::{
-    AmazonTranslateService, MockTranslationService, TranslationError, TranslationService,
-};
+pub use translation::{AmazonTranslateService, TranslationError, TranslationService};
