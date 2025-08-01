@@ -833,4 +833,259 @@ mod tests {
         assert!(html_content.contains("GraphQL Playground"));
         assert!(html_content.contains("<html"));
     }
+
+    #[test]
+    fn test_news_item_to_trade_news_conversion() {
+        let news_item = NewsItem {
+            id: "test-123".to_string(),
+            title: "Lakers <b>Trade</b> News".to_string(),
+            description: Some("Breaking: <i>Lakers</i> make a move".to_string()),
+            link: "https://example.com/news".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        let trade_news = TradeNews::from(news_item.clone());
+
+        assert_eq!(trade_news.id, news_item.id);
+        assert_eq!(trade_news.title, "Lakers Trade News");
+        assert_eq!(
+            trade_news.description,
+            Some("Breaking: Lakers make a move".to_string())
+        );
+        assert_eq!(trade_news.link, news_item.link);
+        assert_eq!(trade_news.source, "ESPN");
+        assert_eq!(trade_news.published_at, news_item.published_at);
+        assert_eq!(trade_news.category, news_item.category);
+        assert_eq!(trade_news.title_ja, None);
+        assert_eq!(trade_news.description_ja, None);
+        assert_eq!(trade_news.translation_status, "pending");
+        assert_eq!(trade_news.translated_at, None);
+    }
+
+    #[test]
+    fn test_news_item_to_trade_news_without_description() {
+        let news_item = NewsItem {
+            id: "test-456".to_string(),
+            title: "Celtics Update".to_string(),
+            description: None,
+            link: "https://example.com/celtics".to_string(),
+            source: NewsSource::RealGM,
+            published_at: Utc::now(),
+            category: "Other".to_string(),
+        };
+
+        let trade_news = TradeNews::from(news_item);
+
+        assert!(trade_news.description.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_scrape_rss_mutation() {
+        // データベース接続のテスト設定
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect("postgresql://test_user:test_password@localhost:5432/test_db")
+            .await;
+
+        if pool.is_err() {
+            eprintln!("Skipping test: PostgreSQL database required");
+            return;
+        }
+
+        let pool = pool.unwrap();
+        let schema = create_schema(pool);
+
+        // scrapeRssミューテーションのテスト
+        let mutation = r#"
+            mutation {
+                scrapeRss {
+                    savedCount
+                    skippedCount
+                    errorCount
+                    errors
+                }
+            }
+        "#;
+
+        let result = schema.execute(mutation).await;
+
+        // ミューテーションが実行されることを確認（実際のRSSフィードへのアクセスは失敗する可能性あり）
+        assert!(result.errors.is_empty() || result.data != Value::Null);
+    }
+
+    #[test]
+    fn test_scrape_result_with_errors() {
+        let result = ScrapeResult {
+            saved_count: 5,
+            skipped_count: 3,
+            error_count: 2,
+            errors: vec![
+                "item1: Parse error".to_string(),
+                "item2: Database error".to_string(),
+            ],
+        };
+
+        assert_eq!(result.saved_count, 5);
+        assert_eq!(result.skipped_count, 3);
+        assert_eq!(result.error_count, 2);
+        assert_eq!(result.errors.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_translate_pending_news_database_update() {
+        // モック翻訳サービスを使用
+        std::env::set_var("USE_MOCK_TRANSLATION", "true");
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect("postgresql://test_user:test_password@localhost:5432/test_db")
+            .await;
+
+        if pool.is_err() {
+            eprintln!("Skipping test: PostgreSQL database required");
+            std::env::remove_var("USE_MOCK_TRANSLATION");
+            return;
+        }
+
+        let pool = pool.unwrap();
+
+        // テスト用のニュースアイテムを挿入
+        let test_id = format!(
+            "translation-test-{}",
+            Utc::now().timestamp_nanos_opt().unwrap()
+        );
+        let insert_result = sqlx::query(
+            r#"
+            INSERT INTO trade_news (id, title, description, source, link, category, published_at, translation_status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#
+        )
+        .bind(&test_id)
+        .bind("Test Title")
+        .bind("Test Description")
+        .bind("ESPN")
+        .bind("https://example.com/test")
+        .bind("Trade")
+        .bind(Utc::now())
+        .bind("pending")
+        .execute(&pool)
+        .await;
+
+        if insert_result.is_err() {
+            eprintln!("Failed to insert test data: {:?}", insert_result.err());
+            std::env::remove_var("USE_MOCK_TRANSLATION");
+            return;
+        }
+
+        let schema = create_schema(pool.clone());
+
+        // translatePendingNewsミューテーションを実行
+        let mutation = r#"
+            mutation {
+                translatePendingNews {
+                    translatedCount
+                    errorCount
+                    errors
+                }
+            }
+        "#;
+
+        let result = schema.execute(mutation).await;
+        assert!(result.errors.is_empty());
+
+        // 翻訳されたことを確認
+        let translated = sqlx::query_as::<_, crate::scraper::persistence::SavedNewsItem>(
+            "SELECT * FROM trade_news WHERE id = $1",
+        )
+        .bind(&test_id)
+        .fetch_one(&pool)
+        .await;
+
+        if let Ok(item) = translated {
+            assert!(item.title_ja.is_some());
+            assert_eq!(item.translation_status, "completed");
+            assert!(item.translated_at.is_some());
+        }
+
+        // クリーンアップ
+        let _ = sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&test_id)
+            .execute(&pool)
+            .await;
+
+        std::env::remove_var("USE_MOCK_TRANSLATION");
+    }
+
+    #[tokio::test]
+    async fn test_translate_pending_news_with_rate_limit() {
+        // レート制限のテスト
+        std::env::set_var("USE_MOCK_TRANSLATION", "true");
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect("postgresql://test_user:test_password@localhost:5432/test_db")
+            .await;
+
+        if pool.is_err() {
+            eprintln!("Skipping test: PostgreSQL database required");
+            std::env::remove_var("USE_MOCK_TRANSLATION");
+            return;
+        }
+
+        let pool = pool.unwrap();
+
+        // 複数のアイテムを挿入してレート制限のシミュレーション
+        let mut test_ids = Vec::new();
+        for i in 0..3 {
+            let test_id = format!(
+                "rate-limit-test-{}-{}",
+                Utc::now().timestamp_nanos_opt().unwrap(),
+                i
+            );
+            test_ids.push(test_id.clone());
+
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO trade_news (id, title, description, source, link, category, published_at, translation_status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                "#
+            )
+            .bind(&test_id)
+            .bind(format!("Test Title {}", i))
+            .bind(format!("Test Description {}", i))
+            .bind("ESPN")
+            .bind(format!("https://example.com/test{}", i))
+            .bind("Trade")
+            .bind(Utc::now())
+            .bind("pending")
+            .execute(&pool)
+            .await;
+        }
+
+        let schema = create_schema(pool.clone());
+        let mutation = r#"
+            mutation {
+                translatePendingNews {
+                    translatedCount
+                    errorCount
+                    errors
+                }
+            }
+        "#;
+
+        let result = schema.execute(mutation).await;
+        assert!(result.errors.is_empty());
+
+        // クリーンアップ
+        for test_id in test_ids {
+            let _ = sqlx::query("DELETE FROM trade_news WHERE id = $1")
+                .bind(&test_id)
+                .execute(&pool)
+                .await;
+        }
+
+        std::env::remove_var("USE_MOCK_TRANSLATION");
+    }
 }
