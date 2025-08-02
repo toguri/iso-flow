@@ -99,6 +99,21 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   })
 }
 
+# Separate secret for DATABASE_URL format
+resource "aws_secretsmanager_secret" "db_url" {
+  name                    = "${local.name}-database-url"
+  recovery_window_in_days = 7
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "db_url" {
+  secret_id = aws_secretsmanager_secret.db_url.id
+  secret_string = jsonencode({
+    database_url = "postgresql://${var.db_username}:${var.db_password}@${aws_rds_cluster.main.endpoint}:${aws_rds_cluster.main.port}/${var.db_name}?sslmode=require"
+  })
+}
+
 # Aurora Serverless v2 Cluster
 resource "aws_rds_cluster" "main" {
   cluster_identifier = "${local.name}-aurora-cluster"
