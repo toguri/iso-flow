@@ -396,7 +396,31 @@ jobs:
           AWS_REGION: ap-northeast-1
         run: |
           echo "🧪 Running tests with coverage..."
-          cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
+          cargo tarpaulin --out xml --out Lcov --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
+          # カバレッジサマリーを保存
+          cargo tarpaulin --print-summary > coverage-summary.txt
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            backend/cobertura.xml
+            backend/coverage-summary.txt
+          retention-days: 7
+
+      - name: Save PR number
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "${{ github.event.pull_request.number }}" > pr-number.txt
+
+      - name: Upload PR number artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-number
+          path: pr-number.txt
+          retention-days: 1
 
       - name: Upload backend coverage to Codecov
         uses: codecov/codecov-action@v4
