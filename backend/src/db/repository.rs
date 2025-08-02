@@ -227,11 +227,12 @@ mod tests {
         };
         let repo = PgNewsRepository::new(pool.clone());
 
+        let timestamp = Utc::now().timestamp_nanos_opt().unwrap();
         let test_item = NewsItem {
-            id: format!("test-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            id: format!("test-{}", timestamp),
             title: "Test News".to_string(),
             description: Some("Test description".to_string()),
-            link: "https://example.com/test".to_string(),
+            link: format!("https://example.com/test-{}", timestamp),
             source: NewsSource::ESPN,
             published_at: Utc::now(),
             category: "Trade".to_string(),
@@ -333,6 +334,250 @@ mod tests {
         let recent_news = repo.get_recent_news(since).await.unwrap();
         assert!(!recent_news.is_empty());
 
+        for item in &news_items {
+            sqlx::query("DELETE FROM trade_news WHERE id = $1")
+                .bind(&item.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_save_news_with_empty_list() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool.clone());
+
+        // 空のリストを保存しても問題ないことを確認
+        let result = repo.save_news(vec![]).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_save_news_with_duplicate_id() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool.clone());
+
+        let test_item = NewsItem {
+            id: format!("duplicate-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            title: "Original News".to_string(),
+            description: Some("Original description".to_string()),
+            link: "https://example.com/original".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        // 最初の保存
+        repo.save_news(vec![test_item.clone()]).await.unwrap();
+
+        // 同じIDで異なる内容のアイテムを保存（ON CONFLICT DO NOTHINGにより無視される）
+        let duplicate_item = NewsItem {
+            id: test_item.id.clone(),
+            title: "Modified News".to_string(),
+            description: Some("Modified description".to_string()),
+            link: "https://example.com/modified".to_string(),
+            source: NewsSource::RealGM,
+            published_at: Utc::now(),
+            category: "Rumor".to_string(),
+        };
+
+        let result = repo.save_news(vec![duplicate_item]).await;
+        assert!(result.is_ok());
+
+        // 元のデータが保持されていることを確認
+        let all_news = repo.get_all_news().await.unwrap();
+        let saved_item = all_news
+            .iter()
+            .find(|item| item.id == test_item.id)
+            .unwrap();
+        assert_eq!(saved_item.title, "Original News");
+        assert_eq!(saved_item.source, NewsSource::ESPN);
+
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&test_item.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_get_news_by_category_empty_result() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool);
+
+        // 存在しないカテゴリで検索
+        let result = repo
+            .get_news_by_category("NonExistentCategory")
+            .await
+            .unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_news_by_source_empty_result() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool);
+
+        // 存在しないソースで検索
+        let result = repo.get_news_by_source("NonExistentSource").await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_recent_news_with_future_date() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool);
+
+        // 未来の日付で検索（結果は空になるはず）
+        let future_date = Utc::now() + chrono::Duration::hours(24);
+        let result = repo.get_recent_news(future_date).await.unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_save_and_retrieve_news_with_null_description() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool.clone());
+
+        let test_item = NewsItem {
+            id: format!("null-desc-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            title: "News without description".to_string(),
+            description: None,
+            link: "https://example.com/no-desc".to_string(),
+            source: NewsSource::ESPN,
+            published_at: Utc::now(),
+            category: "Trade".to_string(),
+        };
+
+        repo.save_news(vec![test_item.clone()]).await.unwrap();
+
+        let all_news = repo.get_all_news().await.unwrap();
+        let saved_item = all_news
+            .iter()
+            .find(|item| item.id == test_item.id)
+            .unwrap();
+        assert_eq!(saved_item.description, None);
+
+        sqlx::query("DELETE FROM trade_news WHERE id = $1")
+            .bind(&test_item.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_multiple_sources_and_categories() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool.clone());
+
+        let sources = vec![NewsSource::ESPN, NewsSource::RealGM, NewsSource::HoopsHype];
+        let categories = vec!["Trade", "Rumor", "Analysis"];
+        let mut all_items = vec![];
+
+        // 各ソースとカテゴリの組み合わせでニュースを作成
+        for (i, (source, category)) in sources.iter().zip(categories.iter()).enumerate() {
+            let item = NewsItem {
+                id: format!("multi-{}-{}", i, Utc::now().timestamp_nanos_opt().unwrap()),
+                title: format!("{} {} News", source.to_string(), category),
+                description: Some(format!(
+                    "Description for {} {}",
+                    source.to_string(),
+                    category
+                )),
+                link: format!(
+                    "https://example.com/{}/{}",
+                    source.to_string().to_lowercase(),
+                    category.to_lowercase()
+                ),
+                source: source.clone(),
+                published_at: Utc::now(),
+                category: category.to_string(),
+            };
+            all_items.push(item);
+        }
+
+        repo.save_news(all_items.clone()).await.unwrap();
+
+        // 各カテゴリで検索
+        for category in &categories {
+            let news_by_category = repo.get_news_by_category(category).await.unwrap();
+            assert!(!news_by_category.is_empty());
+            assert!(news_by_category
+                .iter()
+                .all(|item| &item.category == category));
+        }
+
+        // 各ソースで検索
+        for source in &sources {
+            let news_by_source = repo.get_news_by_source(&source.to_string()).await.unwrap();
+            assert!(!news_by_source.is_empty());
+            assert!(news_by_source.iter().all(|item| item.source == *source));
+        }
+
+        // クリーンアップ
+        for item in &all_items {
+            sqlx::query("DELETE FROM trade_news WHERE id = $1")
+                .bind(&item.id)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ordering_in_get_all_news() {
+        let Some(pool) = setup_test_db().await else {
+            return;
+        };
+        let repo = PgNewsRepository::new(pool.clone());
+
+        let base_time = Utc::now();
+        let mut news_items = vec![];
+
+        // 異なる時刻のニュースを作成
+        for i in 0..5 {
+            news_items.push(NewsItem {
+                id: format!("order-{}-{}", i, base_time.timestamp_nanos_opt().unwrap()),
+                title: format!("News {}", i),
+                description: Some(format!("Description {}", i)),
+                link: format!("https://example.com/news/{}", i),
+                source: NewsSource::ESPN,
+                published_at: base_time - chrono::Duration::hours(i),
+                category: "Trade".to_string(),
+            });
+        }
+
+        repo.save_news(news_items.clone()).await.unwrap();
+
+        let all_news = repo.get_all_news().await.unwrap();
+
+        // published_at降順で並んでいることを確認
+        let mut prev_time = None;
+        for item in &all_news {
+            if item.id.starts_with("order-") {
+                if let Some(prev) = prev_time {
+                    assert!(item.published_at <= prev);
+                }
+                prev_time = Some(item.published_at);
+            }
+        }
+
+        // クリーンアップ
         for item in &news_items {
             sqlx::query("DELETE FROM trade_news WHERE id = $1")
                 .bind(&item.id)
