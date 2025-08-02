@@ -1,4 +1,4 @@
-name: PR Checks (Optimized)
+name: PR Checks
 
 on:
   pull_request:
@@ -7,7 +7,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SQLX_OFFLINE: true
-  RUST_BACKTRACE: 1
 
 jobs:
   # ステップ1: PR分析 - PRのタイプと必要なチェックを判定
@@ -67,14 +66,11 @@ jobs:
             fi
           fi
 
-  # ステップ2: 基本チェック（全PRで実行）
-  basic-checks:
-    name: Basic Checks
+  # ステップ2: コミットメッセージチェック（必須チェック用）
+  check-commit-messages:
+    name: Check Commit Messages
     runs-on: ubuntu-latest
     needs: analyze-pr
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,6 +90,31 @@ jobs:
           done
           echo "✅ All commit messages are valid"
 
+  # ステップ2.5: Auto Label PR（必須チェック用）
+  auto-label-pr:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    needs: analyze-pr
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auto Label PR
+        if: github.event_name == 'pull_request'
+        uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  # ステップ2.6: 共通チェック（すべてのPRで実行）
+  common-checks:
+    name: Common Checks
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, check-commit-messages, auto-label-pr]
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Validate PR Format
         run: |
           echo "🔍 Validating PR format..."
@@ -107,17 +128,11 @@ jobs:
           fi
           echo "✅ PR format is valid"
 
-      - name: Auto Label PR
-        if: github.event_name == 'pull_request'
-        uses: actions/labeler@v5
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
-  # ステップ3: Rust統合チェック（lint、test、coverage を統合）
-  rust-all-checks:
-    name: Rust All Checks
+  # ステップ3: Rustコードチェック（条件付き実行）
+  rust-checks:
+    name: Rust Checks
     runs-on: ubuntu-latest
-    needs: [analyze-pr, basic-checks]
+    needs: [analyze-pr, common-checks]
     if: needs.analyze-pr.outputs.skip_tests != 'true'
     permissions:
       id-token: write
@@ -155,27 +170,6 @@ jobs:
             ~/.cargo/git/db/
             backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Install tools
-        run: |
-          # cargo-nextestのインストール（並列テスト実行用）
-          if ! command -v cargo-nextest &> /dev/null; then
-            curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-~/.cargo}/bin
-          fi
-          
-          # sqlx-cliのインストール
-          if ! command -v sqlx &> /dev/null; then
-            cargo install sqlx-cli --no-default-features --features postgres
-          fi
-          
-          # cargo-tarpaulinのインストール（カバレッジ用）
-          if [ "${{ needs.analyze-pr.outputs.skip_coverage }}" != "true" ]; then
-            if ! command -v cargo-tarpaulin &> /dev/null; then
-              cargo install cargo-tarpaulin --version 0.27.3
-            fi
-          fi
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -186,7 +180,9 @@ jobs:
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
-        run: sqlx migrate run --source migrations_postgres
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -194,71 +190,79 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
 
-      - name: Run tests with nextest (parallel)
+      - name: Run tests
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
           AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
-          NEXTEST_RETRIES: 2
-        run: |
-          echo "🚀 Running tests in parallel with nextest..."
-          cargo nextest run --all-features --workspace -- --include-ignored
+        run: cargo test -- --include-ignored
 
-      - name: Generate coverage report
-        if: needs.analyze-pr.outputs.skip_coverage != 'true'
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
-          AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
-        run: |
-          echo "🧪 Generating coverage report..."
-          cargo tarpaulin --out xml --out Lcov --verbose --workspace \
-            --exclude-files "*/migrations/*" --exclude-files "*/tests/*" \
-            -- --include-ignored
-          
-          # カバレッジサマリーを保存
-          cargo tarpaulin --print-summary > coverage-summary.txt
-          
-          # カバレッジの数値を抽出してJSONファイルに保存
-          COVERAGE=$(xmlstarlet sel -t -v "//coverage/@line-rate" cobertura.xml | awk '{printf "%.2f", $1 * 100}')
-          echo "{\"coverage\": $COVERAGE}" > coverage-data.json
-
-      - name: Upload coverage artifacts
-        if: needs.analyze-pr.outputs.skip_coverage != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            backend/cobertura.xml
-            backend/coverage-summary.txt
-            backend/coverage-data.json
-          retention-days: 7
-
-      - name: Save PR number
-        if: github.event_name == 'pull_request' && needs.analyze-pr.outputs.skip_coverage != 'true'
-        run: echo "${{ github.event.pull_request.number }}" > pr-number.txt
-
-      - name: Upload PR number artifact
-        if: github.event_name == 'pull_request' && needs.analyze-pr.outputs.skip_coverage != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-number
-          path: backend/pr-number.txt
-          retention-days: 1
-
-      - name: Upload to Codecov
-        if: needs.analyze-pr.outputs.skip_coverage != 'true'
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./backend/cobertura.xml
-          flags: backend
-          fail_ci_if_error: true
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  # ステップ4: フロントエンドチェック
-  frontend-checks:
-    name: Frontend Checks
+  # ステップ3.5: テスト実行（必須チェック用）
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    needs: [analyze-pr, basic-checks]
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_tests != 'true'
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+          AWS_REGION: ap-northeast-1
+        run: cargo test -- --include-ignored
+
+  # ステップ3.6: フロントエンドテスト
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
     if: needs.analyze-pr.outputs.skip_tests != 'true'
     defaults:
       run:
@@ -281,8 +285,6 @@ jobs:
             frontend/.gradle
             frontend/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
@@ -290,29 +292,12 @@ jobs:
       - name: Run frontend tests
         run: ./gradlew jsTest
 
-      - name: Generate frontend coverage
-        if: needs.analyze-pr.outputs.skip_coverage != 'true'
-        run: ./gradlew jsBrowserTest
-
-      - name: Upload frontend coverage to Codecov
-        if: needs.analyze-pr.outputs.skip_coverage != 'true'
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./frontend/build/js/packages/build/reports/coverage/lcov.info
-          flags: frontend
-          fail_ci_if_error: true
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  # ステップ5: セキュリティとドキュメントチェック（並列実行）
-  additional-checks:
-    name: Additional Checks
+  # ステップ4: セキュリティ監査（条件付き実行）
+  security-audit:
+    name: Security Audit
     runs-on: ubuntu-latest
-    needs: [analyze-pr, basic-checks]
-    if: needs.analyze-pr.outputs.skip_tests != 'true' || needs.analyze-pr.outputs.pr_type == 'docs'
-    strategy:
-      matrix:
-        check: [security, docs]
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_tests != 'true'
     defaults:
       run:
         working-directory: backend
@@ -322,30 +307,179 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        run: cargo audit
+
+  # ステップ5: ドキュメントビルド（条件付き実行）
+  docs-check:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.pr_type == 'code' || needs.analyze-pr.outputs.pr_type == 'docs'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build documentation
+        run: cargo doc --no-deps
+
+  # ステップ6: カバレッジレポート（条件付き実行）
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_coverage != 'true'
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      SQLX_OFFLINE: true
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache tarpaulin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-tarpaulin-0.27.3
+
+      - name: Install tarpaulin
+        run: |
+          if ! command -v cargo-tarpaulin &> /dev/null; then
+            cargo install cargo-tarpaulin --version 0.27.3
+          fi
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
+      - name: Configure AWS credentials for coverage
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+
+      - name: Generate coverage report
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+          AWS_REGION: ap-northeast-1
+        run: |
+          echo "🧪 Running tests with coverage..."
+          cargo tarpaulin --out xml --out Lcov --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
+          # カバレッジサマリーを保存
+          cargo tarpaulin --print-summary > coverage-summary.txt
+          
+          # カバレッジの数値を抽出してJSONファイルに保存
+          COVERAGE=$(xmlstarlet sel -t -v "//coverage/@line-rate" cobertura.xml | awk '{printf "%.2f", $1 * 100}')
+          echo "{\"coverage\": $COVERAGE}" > coverage-data.json
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            backend/cobertura.xml
+            backend/coverage-summary.txt
+            backend/coverage-data.json
+          retention-days: 7
+
+      - name: Save PR number
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "${{ github.event.pull_request.number }}" > pr-number.txt
+
+      - name: Upload PR number artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-number
+          path: pr-number.txt
+          retention-days: 1
+
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/cobertura.xml
+          flags: backend
+          fail_ci_if_error: true
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ステップ6.1: フロントエンドカバレッジ
+  frontend-coverage:
+    name: Generate Frontend Coverage Report
+    runs-on: ubuntu-latest
+    needs: [analyze-pr, common-checks]
+    if: needs.analyze-pr.outputs.skip_coverage != 'true'
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            frontend/.gradle
+            frontend/build
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      - name: Run Security Audit
-        if: matrix.check == 'security' && needs.analyze-pr.outputs.skip_tests != 'true'
-        run: |
-          cargo install cargo-audit
-          cargo audit
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
-      - name: Build Documentation
-        if: matrix.check == 'docs' && (needs.analyze-pr.outputs.pr_type == 'code' || needs.analyze-pr.outputs.pr_type == 'docs')
-        run: cargo doc --no-deps
+      - name: Run tests with coverage
+        run: ./gradlew jsBrowserTest
 
-  # ステップ6: Codecovダミーステータス（スキップ時用）
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./frontend/build/js/packages/build/reports/coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: true
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ステップ6.5: Codecovダミーステータス（スキップ時用）
   codecov-skip:
     name: Codecov Skip Status
     runs-on: ubuntu-latest
@@ -389,7 +523,7 @@ jobs:
     name: Final Status Check
     runs-on: ubuntu-latest
     if: always()
-    needs: [analyze-pr, basic-checks, rust-all-checks, frontend-checks, additional-checks, codecov-skip]
+    needs: [analyze-pr, check-commit-messages, auto-label-pr, common-checks, rust-checks, test, frontend-tests, security-audit, docs-check, coverage, frontend-coverage, codecov-skip]
     steps:
       - name: Check PR Type
         run: |
@@ -402,19 +536,23 @@ jobs:
       - name: Determine Success
         run: |
           # 各ジョブの結果を確認
-          if [[ "${{ needs.basic-checks.result }}" != "success" ]]; then
-            echo "❌ Basic checks failed"
+          if [[ "${{ needs.common-checks.result }}" != "success" ]]; then
+            echo "❌ Common checks failed"
             exit 1
           fi
           
           # スキップされたジョブは成功として扱う
           if [[ "${{ needs.analyze-pr.outputs.skip_tests }}" != "true" ]]; then
-            if [[ "${{ needs.rust-all-checks.result }}" != "success" ]]; then
+            if [[ "${{ needs.rust-checks.result }}" != "success" ]]; then
               echo "❌ Rust checks failed"
               exit 1
             fi
-            if [[ "${{ needs.frontend-checks.result }}" != "success" ]]; then
-              echo "❌ Frontend checks failed"
+            if [[ "${{ needs.frontend-tests.result }}" != "success" ]]; then
+              echo "❌ Frontend tests failed"
+              exit 1
+            fi
+            if [[ "${{ needs.security-audit.result }}" != "success" ]]; then
+              echo "❌ Security audit failed"
               exit 1
             fi
           fi
