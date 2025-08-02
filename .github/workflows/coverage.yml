@@ -90,7 +90,11 @@ jobs:
       run: |
         echo "🧪 Running tests with coverage..."
         cargo tarpaulin --out xml --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
-        cargo tarpaulin --print-summary
+        cargo tarpaulin --print-summary > coverage-summary.txt
+        
+        # カバレッジ率を抽出して保存
+        COVERAGE=$(grep "Coverage" coverage-summary.txt | grep -oE '[0-9]+\.[0-9]+%' | head -1 | sed 's/%//')
+        echo "$COVERAGE" > coverage-percentage.txt
     
     - name: Upload coverage to Codecov
       if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
@@ -108,7 +112,9 @@ jobs:
         name: coverage-report
         path: |
           backend/cobertura.xml
-        retention-days: 7
+          backend/coverage-summary.txt
+          backend/coverage-percentage.txt
+        retention-days: 30
     
     - name: Generate coverage summary
       run: |
