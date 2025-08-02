@@ -23,3 +23,6 @@ lcov.info
 tarpaulin-report.html
 coverage/
 *.profraw
+
+# Task definitions for different environments
+task-definition-*.json
