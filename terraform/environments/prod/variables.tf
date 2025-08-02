@@ -43,29 +43,24 @@ variable "database_password" {
   sensitive   = true
 }
 
-# TODO: These variables will be used when we implement advanced RDS configuration
-# tflint-ignore: terraform_unused_declarations
 variable "database_min_capacity" {
   description = "Minimum Aurora Serverless v2 capacity"
   type        = number
   default     = 1.0 # Production recommendation
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "database_max_capacity" {
   description = "Maximum Aurora Serverless v2 capacity"
   type        = number
   default     = 4.0 # Production recommendation
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "database_backup_retention_period" {
   description = "Database backup retention period in days"
   type        = number
   default     = 30 # Production recommendation
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "database_deletion_protection" {
   description = "Enable deletion protection for the database"
   type        = bool
@@ -85,22 +80,18 @@ variable "ecs_task_memory" {
   default     = "2048" # Production recommendation
 }
 
-# TODO: These variables will be used when we implement ECS auto-scaling
-# tflint-ignore: terraform_unused_declarations
 variable "ecs_desired_count" {
   description = "Desired number of ECS tasks"
   type        = number
   default     = 2 # High availability
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "ecs_min_capacity" {
   description = "Minimum number of ECS tasks for auto scaling"
   type        = number
   default     = 2
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "ecs_max_capacity" {
   description = "Maximum number of ECS tasks for auto scaling"
   type        = number
@@ -108,29 +99,24 @@ variable "ecs_max_capacity" {
 }
 
 # MWAA Variables (Production values)
-# TODO: These variables will be used when we enable MWAA
-# tflint-ignore: terraform_unused_declarations
 variable "enable_mwaa" {
   description = "Enable Amazon MWAA deployment"
   type        = bool
   default     = true # Enable in production
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "mwaa_environment_class" {
   description = "Environment class for MWAA"
   type        = string
   default     = "mw1.medium" # Production recommendation
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "mwaa_max_workers" {
   description = "Maximum number of workers for MWAA"
   type        = number
   default     = 5 # Production recommendation
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "mwaa_min_workers" {
   description = "Minimum number of workers for MWAA"
   type        = number
@@ -151,15 +137,12 @@ variable "alb_log_retention_days" {
 }
 
 # Domain and Certificate
-# TODO: These variables will be used when we configure custom domain
-# tflint-ignore: terraform_unused_declarations
 variable "domain_name" {
   description = "Domain name for the application"
   type        = string
   default     = "" # Set in terraform.tfvars
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "certificate_arn" {
   description = "ACM certificate ARN for HTTPS"
   type        = string
@@ -167,15 +150,12 @@ variable "certificate_arn" {
 }
 
 # Auto Scaling
-# TODO: These variables will be used for fine-tuning auto-scaling
-# tflint-ignore: terraform_unused_declarations
 variable "cpu_target_value" {
   description = "Target CPU utilization for auto scaling"
   type        = number
   default     = 70
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "memory_target_value" {
   description = "Target memory utilization for auto scaling"
   type        = number
@@ -183,36 +163,30 @@ variable "memory_target_value" {
 }
 
 # Health Check
-# TODO: These variables will be used for health check configuration
-# tflint-ignore: terraform_unused_declarations
 variable "health_check_grace_period" {
   description = "Health check grace period in seconds"
   type        = number
   default     = 60
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "health_check_interval" {
   description = "Health check interval in seconds"
   type        = number
   default     = 30
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "health_check_timeout" {
   description = "Health check timeout in seconds"
   type        = number
   default     = 10
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "health_check_healthy_threshold" {
   description = "Number of consecutive health checks successes required"
   type        = number
   default     = 2
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "health_check_unhealthy_threshold" {
   description = "Number of consecutive health check failures required"
   type        = number
@@ -220,15 +194,12 @@ variable "health_check_unhealthy_threshold" {
 }
 
 # Monitoring and Alerting
-# TODO: These variables will be used for monitoring setup
-# tflint-ignore: terraform_unused_declarations
 variable "enable_monitoring" {
   description = "Enable enhanced monitoring"
   type        = bool
   default     = true
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "alarm_email" {
   description = "Email address for CloudWatch alarm notifications"
   type        = string
@@ -236,8 +207,6 @@ variable "alarm_email" {
 }
 
 # Cost Management
-# TODO: This variable will be used for cost allocation setup
-# tflint-ignore: terraform_unused_declarations
 variable "enable_cost_allocation_tags" {
   description = "Enable cost allocation tags"
   type        = bool
@@ -245,15 +214,12 @@ variable "enable_cost_allocation_tags" {
 }
 
 # Security
-# TODO: These variables will be used when we enable WAF
-# tflint-ignore: terraform_unused_declarations
 variable "enable_waf" {
   description = "Enable AWS WAF for CloudFront"
   type        = bool
   default     = true
 }
 
-# tflint-ignore: terraform_unused_declarations
 variable "allowed_ips" {
   description = "List of allowed IP addresses (leave empty for public access)"
   type        = list(string)
@@ -265,9 +231,9 @@ variable "additional_tags" {
   description = "Additional tags to apply to all resources"
   type        = map(string)
   default = {
-    Terraform  = "true"
-    Owner      = "Engineering"
-    CostCenter = "Engineering"
-    Compliance = "PCI"
+    Terraform   = "true"
+    Owner       = "Engineering"
+    CostCenter  = "Engineering"
+    Compliance  = "PCI"
   }
 }
