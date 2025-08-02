@@ -33,3 +33,8 @@ output "database_secret_arn" {
   description = "ARN of the Secrets Manager secret containing database credentials"
   value       = aws_secretsmanager_secret.db_credentials.arn
 }
+
+output "database_url_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing DATABASE_URL"
+  value       = aws_secretsmanager_secret.db_url.arn
+}

@@ -1,0 +1,161 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - dev
+  push:
+    branches: [main]
+    paths:
+      - 'backend/migrations_postgres/**'
+      - 'backend/init.sql'
+      - '.github/workflows/database-migration.yml'
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: iso-flow-prod-backend
+
+jobs:
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Build migration image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: migrate-${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f backend/Dockerfile.migrate backend/
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    
+    - name: Get database connection info
+      id: db-info
+      run: |
+        # Get database secret ARN
+        DB_SECRET_ARN=$(aws secretsmanager list-secrets \
+          --filters Key=name,Values=iso-flow-prod-aurora-credentials \
+          --query 'SecretList[0].ARN' --output text)
+        
+        echo "db_secret_arn=$DB_SECRET_ARN" >> $GITHUB_OUTPUT
+        
+        # Get VPC configuration from ECS service
+        NETWORK_CONFIG=$(aws ecs describe-services \
+          --cluster iso-flow-prod-cluster \
+          --services iso-flow-prod-backend-service \
+          --query 'services[0].networkConfiguration.awsvpcConfiguration' \
+          --output json)
+        
+        echo "subnets=$(echo $NETWORK_CONFIG | jq -r '.subnets | join(",")')" >> $GITHUB_OUTPUT
+        echo "security_groups=$(echo $NETWORK_CONFIG | jq -r '.securityGroups | join(",")')" >> $GITHUB_OUTPUT
+    
+    - name: Create migration task definition
+      run: |
+        cat > task-definition.json <<EOF
+        {
+          "family": "iso-flow-prod-migrate",
+          "networkMode": "awsvpc",
+          "requiresCompatibilities": ["FARGATE"],
+          "cpu": "256",
+          "memory": "512",
+          "executionRoleArn": "arn:aws:iam::857831414963:role/iso-flow-prod-ecs-task-execution-role",
+          "taskRoleArn": "arn:aws:iam::857831414963:role/iso-flow-prod-ecs-task-role",
+          "containerDefinitions": [
+            {
+              "name": "migrate",
+              "image": "${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:migrate-${{ github.sha }}",
+              "essential": true,
+              "secrets": [
+                {
+                  "name": "DATABASE_URL",
+                  "valueFrom": "${{ steps.db-info.outputs.db_secret_arn }}:database_url::"
+                }
+              ],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "/ecs/iso-flow-prod",
+                  "awslogs-region": "${{ env.AWS_REGION }}",
+                  "awslogs-stream-prefix": "ecs/migrate"
+                }
+              }
+            }
+          ]
+        }
+        EOF
+    
+    - name: Register task definition
+      id: task-def
+      run: |
+        TASK_DEF_ARN=$(aws ecs register-task-definition \
+          --cli-input-json file://task-definition.json \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+        echo "task_def_arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
+    
+    - name: Run migration task
+      id: run-task
+      run: |
+        TASK_ARN=$(aws ecs run-task \
+          --cluster iso-flow-prod-cluster \
+          --task-definition ${{ steps.task-def.outputs.task_def_arn }} \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[${{ steps.db-info.outputs.subnets }}],securityGroups=[${{ steps.db-info.outputs.security_groups }}],assignPublicIp=DISABLED}" \
+          --query 'tasks[0].taskArn' \
+          --output text)
+        echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
+    
+    - name: Wait for migration completion
+      run: |
+        echo "Waiting for migration task to complete..."
+        aws ecs wait tasks-stopped \
+          --cluster iso-flow-prod-cluster \
+          --tasks ${{ steps.run-task.outputs.task_arn }}
+        
+        # Get exit code
+        EXIT_CODE=$(aws ecs describe-tasks \
+          --cluster iso-flow-prod-cluster \
+          --tasks ${{ steps.run-task.outputs.task_arn }} \
+          --query 'tasks[0].containers[0].exitCode' \
+          --output text)
+        
+        if [ "$EXIT_CODE" != "0" ]; then
+          echo "Migration failed with exit code: $EXIT_CODE"
+          
+          # Get logs
+          TASK_ID=$(echo "${{ steps.run-task.outputs.task_arn }}" | rev | cut -d'/' -f1 | rev)
+          echo "Task logs:"
+          aws logs get-log-events \
+            --log-group-name /ecs/iso-flow-prod \
+            --log-stream-name ecs/migrate/$TASK_ID \
+            --limit 100 \
+            --query 'events[*].message' \
+            --output text
+          
+          exit 1
+        fi
+        
+        echo "Migration completed successfully!"
