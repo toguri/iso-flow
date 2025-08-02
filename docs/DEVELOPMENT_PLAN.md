@@ -102,8 +102,8 @@
    - バックエンド: Dockerイメージ作成
 
 3. **本番デプロイ**
-   - フロントエンド: Vercel/Netlify等
-   - バックエンド: Fly.io/Railway等
+   - 詳細は [本番環境デプロイ戦略](./production-deployment-strategy.md) を参照
+   - AWS環境（ECS、RDS、S3、CloudFront、MWAA）への段階的デプロイ
 
 ## 🔧 必要な開発環境
 
