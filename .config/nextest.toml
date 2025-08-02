@@ -1,0 +1,47 @@
+# cargo-nextest configuration
+# https://nexte.st/book/configuration
+
+[profile.default]
+# デフォルトで2回リトライ
+retries = { backoff = "exponential", count = 2, delay = "1s" }
+
+# テストの並列実行数を自動調整
+test-threads = "auto"
+
+# タイムアウト設定（秒）
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+# 失敗時の動作
+fail-fast = false
+
+# 実行状態の表示
+status-level = "pass"
+
+[profile.ci]
+# CI環境では少し控えめな並列度
+test-threads = 4
+
+# タイムアウトを厳しめに
+slow-timeout = { period = "30s", terminate-after = 1 }
+
+# 詳細な出力
+status-level = "fail"
+failure-output = "immediate"
+success-output = "final"
+
+# テストグループの設定
+[[profile.ci.overrides]]
+filter = "test(db::)"
+# データベーステストは並列度を下げる
+test-threads = 2
+retries = { backoff = "exponential", count = 3, delay = "2s" }
+
+[[profile.ci.overrides]]
+filter = "test(graphql::)"
+# GraphQLテストも並列度を調整
+test-threads = 2
+
+[[profile.ci.overrides]]
+filter = "test(translation::)"
+# 外部APIを使うテストはリトライを増やす
+retries = { backoff = "exponential", count = 5, delay = "3s" }
