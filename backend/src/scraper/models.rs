@@ -12,7 +12,7 @@ pub struct NewsItem {
     pub published_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NewsSource {
     ESPN,
     RealGM,

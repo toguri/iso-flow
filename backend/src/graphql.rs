@@ -939,7 +939,7 @@ mod tests {
         .bind("Test Title")
         .bind("Test Description")
         .bind("ESPN")
-        .bind("https://example.com/test")
+        .bind(format!("https://example.com/test-{}", &test_id))
         .bind("Trade")
         .bind(Utc::now())
         .bind("pending")
