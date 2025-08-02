@@ -399,6 +399,10 @@ jobs:
           cargo tarpaulin --out xml --out Lcov --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
           # カバレッジサマリーを保存
           cargo tarpaulin --print-summary > coverage-summary.txt
+          
+          # カバレッジの数値を抽出してJSONファイルに保存
+          COVERAGE=$(xmlstarlet sel -t -v "//coverage/@line-rate" cobertura.xml | awk '{printf "%.2f", $1 * 100}')
+          echo "{\"coverage\": $COVERAGE}" > coverage-data.json
 
       - name: Upload coverage report artifact
         uses: actions/upload-artifact@v4
@@ -407,6 +411,7 @@ jobs:
           path: |
             backend/cobertura.xml
             backend/coverage-summary.txt
+            backend/coverage-data.json
           retention-days: 7
 
       - name: Save PR number

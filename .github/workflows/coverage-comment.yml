@@ -34,11 +34,58 @@ jobs:
             exit 1
           fi
 
+      - name: Get base branch coverage
+        id: base-coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # PRのベースブランチを取得
+          PR_NUMBER=$(cat pr-number/pr-number.txt)
+          BASE_BRANCH=$(gh pr view $PR_NUMBER --json baseRefName -q .baseRefName)
+          echo "Base branch: $BASE_BRANCH"
+          
+          # ベースブランチの最新のワークフロー実行からカバレッジを取得
+          WORKFLOW_RUNS=$(gh api /repos/${{ github.repository }}/actions/runs \
+            -q ".workflow_runs[] | select(.head_branch == \"$BASE_BRANCH\" and .status == \"completed\" and .conclusion == \"success\") | .id" \
+            | head -n 5)
+          
+          BASE_COVERAGE=""
+          for RUN_ID in $WORKFLOW_RUNS; do
+            echo "Checking workflow run $RUN_ID..."
+            # アーティファクトの一覧を取得
+            ARTIFACTS=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts -q '.artifacts[] | select(.name == "coverage-report") | .id' || true)
+            
+            if [ -n "$ARTIFACTS" ]; then
+              for ARTIFACT_ID in $ARTIFACTS; do
+                echo "Downloading artifact $ARTIFACT_ID..."
+                mkdir -p base-coverage
+                cd base-coverage
+                gh api /repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip -H "Accept: application/vnd.github+json" > artifact.zip || continue
+                unzip -q artifact.zip || continue
+                
+                if [ -f "coverage-data.json" ]; then
+                  BASE_COVERAGE=$(jq -r '.coverage' coverage-data.json)
+                  echo "Found base coverage: $BASE_COVERAGE%"
+                  cd ..
+                  break 2
+                fi
+                cd ..
+              done
+            fi
+          done
+          
+          if [ -z "$BASE_COVERAGE" ]; then
+            echo "No base coverage found"
+            echo "base_coverage=unknown" >> $GITHUB_OUTPUT
+          else
+            echo "base_coverage=$BASE_COVERAGE" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Parse coverage report
         id: coverage
         run: |
           # XMLパースツールをインストール
-          sudo apt-get update && sudo apt-get install -y xmlstarlet
+          sudo apt-get update && sudo apt-get install -y xmlstarlet jq
           
           # カバレッジデータを解析
           if [ -f "coverage-report/cobertura.xml" ]; then
@@ -52,9 +99,18 @@ jobs:
               cat coverage-report/coverage-summary.txt >> $GITHUB_OUTPUT
               echo "EOF" >> $GITHUB_OUTPUT
             fi
+            
+            # パッケージごとのカバレッジを取得
+            echo "package_coverage<<EOF" >> $GITHUB_OUTPUT
+            xmlstarlet sel -t -m "//package" \
+              -v "@name" -o " " \
+              -v "format-number(@line-rate * 100, '##.#')" -o "%" -n \
+              coverage-report/cobertura.xml | sort >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
           else
             echo "coverage=0" >> $GITHUB_OUTPUT
             echo "summary=No coverage data available" >> $GITHUB_OUTPUT
+            echo "package_coverage=No package data available" >> $GITHUB_OUTPUT
           fi
 
       - name: Create coverage comment
@@ -63,15 +119,44 @@ jobs:
           script: |
             const prNumber = parseInt('${{ steps.pr-info.outputs.pr-number }}');
             const currentCoverage = parseFloat('${{ steps.coverage.outputs.coverage }}');
+            const baseCoverage = '${{ steps.base-coverage.outputs.base_coverage }}';
             const summary = `${{ steps.coverage.outputs.summary }}`;
+            const packageCoverage = `${{ steps.coverage.outputs.package_coverage }}`;
             
             // カバレッジレポートのマークダウンを生成
             let comment = `## Coverage Report 📊\n\n`;
-            comment += `**Total Coverage**: ${currentCoverage.toFixed(1)}%\n\n`;
+            
+            // カバレッジ差分の計算と表示
+            if (baseCoverage !== 'unknown') {
+              const baseCov = parseFloat(baseCoverage);
+              const diff = currentCoverage - baseCov;
+              const emoji = diff > 0 ? '📈' : (diff < 0 ? '📉' : '➡️');
+              const sign = diff > 0 ? '+' : '';
+              
+              comment += `| Metric | Base | Head | Diff |\n`;
+              comment += `|--------|------|------|------|\n`;
+              comment += `| **Total Coverage** | ${baseCov.toFixed(1)}% | ${currentCoverage.toFixed(1)}% | ${emoji} ${sign}${diff.toFixed(1)}% |\n\n`;
+              
+              if (diff < -1) {
+                comment += `> ⚠️ **Warning**: Coverage decreased by ${Math.abs(diff).toFixed(1)}%\n\n`;
+              } else if (diff > 5) {
+                comment += `> 🎉 **Great job**: Coverage increased by ${diff.toFixed(1)}%!\n\n`;
+              }
+            } else {
+              comment += `**Total Coverage**: ${currentCoverage.toFixed(1)}%\n`;
+              comment += `> ℹ️ Base branch coverage data not available for comparison\n\n`;
+            }
+            
+            // パッケージごとのカバレッジ
+            if (packageCoverage && packageCoverage !== 'No package data available') {
+              comment += `<details>\n<summary>📦 Package Coverage</summary>\n\n`;
+              comment += `\`\`\`\n${packageCoverage}\n\`\`\`\n`;
+              comment += `</details>\n\n`;
+            }
             
             // サマリーの詳細を追加
             if (summary && summary !== 'No coverage data available') {
-              comment += `<details>\n<summary>Coverage Summary</summary>\n\n`;
+              comment += `<details>\n<summary>📋 Coverage Summary</summary>\n\n`;
               comment += `\`\`\`\n${summary}\n\`\`\`\n`;
               comment += `</details>\n\n`;
             }

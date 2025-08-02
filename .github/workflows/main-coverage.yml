@@ -1,0 +1,96 @@
+name: Main Branch Coverage
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_iso_flow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache tarpaulin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: ${{ runner.os }}-tarpaulin-0.27.3
+
+      - name: Install tarpaulin
+        run: |
+          if ! command -v cargo-tarpaulin &> /dev/null; then
+            cargo install cargo-tarpaulin --version 0.27.3
+          fi
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+        run: |
+          cargo install sqlx-cli --no-default-features --features postgres
+          sqlx migrate run --source migrations_postgres
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+
+      - name: Generate coverage report
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5433/test_iso_flow
+          AWS_REGION: ap-northeast-1
+        run: |
+          echo "🧪 Running tests with coverage..."
+          cargo tarpaulin --out xml --out Lcov --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
+          
+          # カバレッジの数値を抽出してJSONファイルに保存
+          COVERAGE=$(xmlstarlet sel -t -v "//coverage/@line-rate" cobertura.xml | awk '{printf "%.2f", $1 * 100}')
+          echo "{\"coverage\": $COVERAGE, \"branch\": \"main\", \"sha\": \"${{ github.sha }}\"}" > coverage-data.json
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            backend/cobertura.xml
+            backend/coverage-data.json
+          retention-days: 30
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/cobertura.xml
+          flags: backend
+          fail_ci_if_error: false
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
