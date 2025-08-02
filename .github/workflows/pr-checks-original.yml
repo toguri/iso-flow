@@ -396,9 +396,9 @@ jobs:
           AWS_REGION: ap-northeast-1
         run: |
           echo "🧪 Running tests with coverage..."
-          cargo tarpaulin --out xml --out Lcov --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored
-          # カバレッジサマリーを保存
-          cargo tarpaulin --print-summary > coverage-summary.txt
+          cargo tarpaulin --out xml --out Lcov --verbose --workspace --exclude-files "*/migrations/*" --exclude-files "*/tests/*" -- --include-ignored 2>&1 | tee tarpaulin-output.log
+          # カバレッジサマリーを保存（tarpaulin出力から抽出）
+          grep -E "[0-9]+\.[0-9]+% coverage" tarpaulin-output.log > coverage-summary.txt || echo "Coverage summary not found" > coverage-summary.txt
           
           # カバレッジの数値を抽出してJSONファイルに保存
           COVERAGE=$(xmlstarlet sel -t -v "//coverage/@line-rate" cobertura.xml | awk '{printf "%.2f", $1 * 100}')
