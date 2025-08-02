@@ -236,8 +236,8 @@ data "aws_elb_service_account" "main" {}
 
 # IAM Roles for ECS with enhanced security
 resource "aws_iam_role" "ecs_task_execution" {
-  name               = "${var.project_name}-${var.environment}-ecs-task-execution"
-  description        = "ECS task execution role for ${var.project_name} ${var.environment}"
+  name        = "${var.project_name}-${var.environment}-ecs-task-execution"
+  description = "ECS task execution role for ${var.project_name} ${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -280,8 +280,8 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
 }
 
 resource "aws_iam_role" "ecs_task" {
-  name               = "${var.project_name}-${var.environment}-ecs-task"
-  description        = "ECS task role for ${var.project_name} ${var.environment}"
+  name        = "${var.project_name}-${var.environment}-ecs-task"
+  description = "ECS task role for ${var.project_name} ${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

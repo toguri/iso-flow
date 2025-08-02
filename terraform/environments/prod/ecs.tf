@@ -13,7 +13,7 @@ module "ecs" {
   # Database connection
   database_url        = "postgresql://${var.database_username}:${var.database_password}@${module.rds.cluster_endpoint}/${var.database_name}?sslmode=require"
   database_secret_arn = module.rds.database_secret_arn
-  
+
   # Task configuration for production
   task_cpu    = var.ecs_task_cpu
   task_memory = var.ecs_task_memory
