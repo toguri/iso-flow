@@ -231,9 +231,9 @@ variable "additional_tags" {
   description = "Additional tags to apply to all resources"
   type        = map(string)
   default = {
-    Terraform   = "true"
-    Owner       = "Engineering"
-    CostCenter  = "Engineering"
-    Compliance  = "PCI"
+    Terraform  = "true"
+    Owner      = "Engineering"
+    CostCenter = "Engineering"
+    Compliance = "PCI"
   }
 }
